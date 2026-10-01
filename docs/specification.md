@@ -135,9 +135,10 @@ together with the recorded region size in pixels.
 - **Emergency stop**: a global hotkey (default **F12**) stops execution immediately.
 - **User takeover**: if the mouse is moved by the user (position differs from the last position set
   by AutoPlay by more than a few pixels), execution pauses and can be resumed or stopped.
-- **Sleep prevention**: while a sequence runs, the application calls
-  `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)` so that
-  the PC neither sleeps nor turns the display off. The previous state is restored when execution
+- **Sleep prevention**: while a sequence runs, the application holds a Windows power request
+  (`PowerCreateRequest` / `PowerSetRequest` with `PowerRequestSystemRequired` and
+  `PowerRequestDisplayRequired`) so that the PC neither sleeps nor turns the display off. Unlike
+  `SetThreadExecutionState`, a power request is not tied to a thread, which suits asynchronous code. The previous state is restored when execution
   ends, whatever the outcome. A locked session cannot be prevented if enforced by a group policy;
   capture and input do not work on a locked session, which results in a verification failure.
 
@@ -258,24 +259,31 @@ The best score is always reported, so that thresholds can be tuned from real run
 ### 8.2 Solution layout
 
 ```
-AutoPlay.sln
+AutoPlay.slnx
 src/
   AutoPlay.Core/        # Domain model, storage, sequence engine, abstractions (no UI, no Win32)
-  AutoPlay.Vision/      # Template matching (OpenCvSharp)
-  AutoPlay.Windows/     # Screen capture, mouse input, global hotkeys, sleep prevention
+  AutoPlay.Vision/      # Template matching and PNG encoding (OpenCvSharp)
+  AutoPlay.Windows/     # Screen capture, mouse input, global hotkeys, sleep prevention (Win32)
   AutoPlay.App/         # WPF application (overlay, editors, status window)
 tests/
   AutoPlay.Core.Tests/
   AutoPlay.Vision.Tests/
 ```
 
+`AutoPlay.Core` and `AutoPlay.Vision` target `net10.0` and their tests run on any OS; the Windows
+projects target `net10.0-windows10.0.17763.0`.
+
 ### 8.3 Key abstractions (`AutoPlay.Core`)
 
 ```csharp
+// 32-bit BGRA, top-down pixels: exchanged between capture, matching and storage
+// without depending on System.Drawing or WPF.
+public sealed class RawImage { /* Width, Height, Pixels, Crop(...) */ }
+
 public interface IScreenCapture
 {
     // Captures a rectangle of the physical screen, in physical pixels.
-    Bitmap Capture(PixelRect area);
+    RawImage Capture(PixelRect area);
 }
 
 public interface IInputDriver
@@ -286,17 +294,30 @@ public interface IInputDriver
 
 public interface ITemplateMatcher
 {
-    MatchResult Find(Bitmap haystack, Bitmap template, double threshold);
+    // Searches the template, resized to templateSize, and returns the best match and its score.
+    MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize);
+}
+
+public interface IImageCodec
+{
+    byte[] EncodePng(RawImage image);
+    RawImage Decode(byte[] data);
 }
 
 public interface IPowerManager
 {
     IDisposable PreventSleep();
 }
+
+public interface IClock
+{
+    DateTimeOffset UtcNow { get; }
+    Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken);
+}
 ```
 
-The sequence engine only depends on these interfaces, so it can be unit tested with fakes, and a
-browser-based driver can be added later without changing it.
+The sequence engine (`SequenceRunner`) only depends on these interfaces, so it can be unit tested
+with fakes, and a browser-based driver can be added later without changing it.
 
 ## 9. Future evolutions
 
