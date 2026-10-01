@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using AutoPlay.App.Services;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Core.Abstractions;
@@ -55,6 +56,8 @@ public partial class App : Application
         services.AddTransient<SequenceRunner>();
 
         // UI
+        services.AddSingleton<IUserDialogs, MessageBoxDialogs>();
+        services.AddSingleton<ScreenRecordingFlow>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
 

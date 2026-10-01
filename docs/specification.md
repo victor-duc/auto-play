@@ -44,37 +44,49 @@ during recording and cannot change screen by accident.
 
 ### 3.1 Framing
 
-1. The user starts "Record screen" from the main window.
-2. A borderless, resizable, **semi-transparent blue overlay** (≈30 % opacity) appears, with a
-   single **Capture** button in its center. If a target region was used before in the profile, the
-   overlay opens at that position and size.
-3. The user moves and resizes the overlay to exactly cover the target region (for Hero Wars: the
-   game canvas, not the whole browser window).
-4. The user clicks **Capture** (or presses Enter).
+1. The user selects a profile and clicks **Record screen** in the main window. The main window is
+   hidden so that it neither covers the target area nor appears in the capture.
+2. A borderless, resizable, **semi-transparent blue overlay** (≈30 % opacity) appears, with its size
+   in physical pixels, short instructions, a **Capture** button and a **Cancel** button. If a target
+   region was used before in the profile, the overlay opens at that position and size.
+3. The user drags the overlay (anywhere outside the buttons) and resizes it by its edges to exactly
+   cover the target region (for Hero Wars: the game canvas, not the whole browser window).
+4. The user clicks **Capture** (Enter) or **Cancel** (Esc).
 
 ### 3.2 Capture
 
-1. The overlay is hidden (fully transparent) for a short moment.
-2. The application captures the pixels of the target region.
-3. The overlay becomes opaque and displays the frozen capture at 1:1 scale, at the same position.
+1. The overlay closes, and the application waits 300 ms for the desktop compositor to remove it.
+2. The application captures the pixels of the target region and stores the region as the profile's
+   last target region.
+3. The **screen editor** opens on the frozen capture.
 
-### 3.3 Annotation
+### 3.3 Annotation (screen editor)
 
-A floating toolbar is shown above the capture, and a side panel lists the locations.
+The screen editor is a maximized window with a toolbar at the top, the capture in the center
+(scaled down to fit if needed, never enlarged) and the list of locations on the right.
 
-- **Toolbar**: screen name field, default delay min/max (ms), **Save** (Enter), **Cancel** (Esc).
-- **Create a location**: click-and-drag draws a rectangle around the element. A simple click
-  without dragging creates a rectangle of default size (48 × 48 px) centered on the click.
-- **Edit a location**: rectangles can be moved and resized with handles. The click point defaults to
-  the rectangle center and can be moved (it must stay inside the rectangle).
-- **Side panel**: one row per location, with an editable name (default `Location N`), the match
-  threshold and a delete button. Selecting a row highlights the rectangle and vice versa.
-- **Save** validates that the screen name is not empty and unique within the profile, and that
-  location names are not empty and unique within the screen. It then persists the screen (§6).
-- **Cancel** discards everything after confirmation if locations were created.
+- **Toolbar**: screen name, default delay before click (min/max, ms), **Save** (Enter),
+  **Cancel** (Esc), a reminder of the mouse gestures and the validation errors, if any.
+- **Create a location**: dragging on an empty area draws a rectangle around the element. A simple
+  click (move below 4 px) creates a 48 × 48 px rectangle centered on the click. Rectangles are at
+  least 8 × 8 px and always stay within the capture.
+- **Move / resize**: dragging a location moves it; dragging a corner of the selected location
+  resizes it. The cursor shows which action applies. Esc during a drag restores the location.
+- **Click point**: shown as a red cross. It defaults to the rectangle center and follows it;
+  **Shift+click** inside the selected location sets it explicitly, after which it keeps its position
+  relative to the rectangle.
+- **Delete** removes the selected location (when no text field has the focus).
+- **Locations panel**: one row per location, with an editable name (default `Location N`), the match
+  threshold (empty = profile default; `0.85` and `0,85` are both accepted) and a delete button.
+  Selecting a row highlights the rectangle in orange, and vice versa.
+- **Save** validates that the screen name is not empty and unique within the profile (ignoring case),
+  that location names are not empty and unique within the screen, that the delays are valid and that
+  thresholds are between 0 and 1. It then persists the screen (§6): the full capture and one template
+  image per location, cropped from the capture.
+- **Cancel**, Esc or closing the window asks for confirmation if anything was changed.
 
-Existing screens can be reopened in the same editor (on their stored capture) to add, edit or remove
-locations.
+From the main window, **Edit** (or a double-click) reopens an existing screen in the same editor, on
+its stored capture, to add, edit or remove locations; **Delete** removes it after confirmation.
 
 ## 4. Building a sequence
 
@@ -126,6 +138,8 @@ together with the recorded region size in pixels.
 
 - V1 supports the **Proportional** positioning mode: `x = left + nx × width`, `y = top + ny × height`.
   This matches applications whose content scales with the window (e.g. Hero Wars).
+- Rectangles are normalized from their edges. Click points designate a pixel and are normalized from
+  the pixel's center (`nx = (x + 0.5) / width`), so that conversions round-trip exactly.
 - The data model reserves an **Anchored** mode (anchor corner + pixel offset) for applications
   whose elements keep a fixed distance to an edge. It is not implemented in V1, but image
   matching (§7) already compensates for moderate positional drift.

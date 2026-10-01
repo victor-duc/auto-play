@@ -72,7 +72,7 @@ public class SequenceRunnerTests
         Assert.Equal([new PixelSize(50, 25)], matcher.RequestedSizes);
         // Location (200, 100, 50, 25) inflated by 50% (12.5 px rounded to 13 vertically).
         Assert.Equal(new PixelRect(175, 87, 100, 51), _capture.Captures[0]);
-        Assert.Equal([new PixelPoint(225, 113)], _input.Clicks);
+        Assert.Equal([new PixelPoint(225, 112)], _input.Clicks);
     }
 
     [Fact]

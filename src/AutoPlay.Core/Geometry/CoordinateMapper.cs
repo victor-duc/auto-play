@@ -4,12 +4,16 @@ namespace AutoPlay.Core.Geometry;
 /// Converts between normalized coordinates (relative to a target region) and physical screen pixels,
 /// using the proportional positioning mode.
 /// </summary>
+/// <remarks>
+/// A point designates a pixel and is normalized from the pixel's center, so that conversions round-trip exactly
+/// and points scale symmetrically. Rectangles are normalized from their edges.
+/// </remarks>
 public static class CoordinateMapper
 {
     public static PixelPoint ToPixel(NormalizedPoint point, PixelRect region) =>
         new(
-            region.Left + Round(point.X * region.Width),
-            region.Top + Round(point.Y * region.Height));
+            region.Left + Math.Clamp((int)Math.Floor(point.X * region.Width), 0, region.Width - 1),
+            region.Top + Math.Clamp((int)Math.Floor(point.Y * region.Height), 0, region.Height - 1));
 
     public static PixelRect ToPixel(NormalizedRect rect, PixelRect region)
     {
@@ -24,8 +28,8 @@ public static class CoordinateMapper
     {
         EnsureNotEmpty(region);
         return new NormalizedPoint(
-            (point.X - region.Left) / (double)region.Width,
-            (point.Y - region.Top) / (double)region.Height);
+            (point.X - region.Left + 0.5) / region.Width,
+            (point.Y - region.Top + 0.5) / region.Height);
     }
 
     public static NormalizedRect ToNormalized(PixelRect rect, PixelRect region)

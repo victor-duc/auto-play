@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using AutoPlay.App.Services;
 using AutoPlay.Core.Model;
 using AutoPlay.Core.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,7 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AutoPlay.App.ViewModels;
 
-public sealed partial class MainViewModel(IProfileStore store) : ObservableObject
+public sealed partial class MainViewModel(IProfileStore store, ScreenRecordingFlow screenRecording, IUserDialogs dialogs) : ObservableObject
 {
     public ObservableCollection<Profile> Profiles { get; } = [];
 
@@ -15,8 +16,12 @@ public sealed partial class MainViewModel(IProfileStore store) : ObservableObjec
     public ObservableCollection<Sequence> Sequences { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(RecordScreenCommand))]
     public partial Profile? SelectedProfile { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EditScreenCommand), nameof(DeleteScreenCommand))]
+    public partial Screen? SelectedScreen { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateProfileCommand))]
@@ -39,22 +44,91 @@ public sealed partial class MainViewModel(IProfileStore store) : ObservableObjec
 
     partial void OnSelectedProfileChanged(Profile? value)
     {
-        Screens.Clear();
+        ReloadScreens();
         Sequences.Clear();
         if (value is null)
         {
             return;
         }
 
-        foreach (var screen in store.LoadScreens(value.Id))
-        {
-            Screens.Add(screen);
-        }
-
         foreach (var sequence in store.LoadSequences(value.Id))
         {
             Sequences.Add(sequence);
         }
+    }
+
+    private void ReloadScreens(Guid? screenToSelect = null)
+    {
+        Screens.Clear();
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        foreach (var screen in store.LoadScreens(SelectedProfile.Id))
+        {
+            Screens.Add(screen);
+        }
+
+        SelectedScreen = Screens.FirstOrDefault(s => s.Id == screenToSelect);
+    }
+
+    private List<string> OtherScreenNames(Screen? except) =>
+        Screens.Where(s => s.Id != except?.Id).Select(s => s.Name).ToList();
+
+    private bool CanRecordScreen() => SelectedProfile is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRecordScreen))]
+    private async Task RecordScreenAsync()
+    {
+        if (SelectedProfile is not { } profile)
+        {
+            return;
+        }
+
+        var knownIds = Screens.Select(s => s.Id).ToHashSet();
+        if (await screenRecording.RecordNewAsync(profile, OtherScreenNames(null)))
+        {
+            ReloadScreens();
+            var created = Screens.FirstOrDefault(s => !knownIds.Contains(s.Id));
+            SelectedScreen = created;
+            StatusMessage = created is null ? "Screen saved." : $"Screen '{created.Name}' saved.";
+        }
+    }
+
+    private bool HasSelectedScreen() => SelectedScreen is not null;
+
+    [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
+    private void EditScreen()
+    {
+        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        {
+            return;
+        }
+
+        if (screenRecording.Edit(profile, screen, OtherScreenNames(screen)))
+        {
+            ReloadScreens(screen.Id);
+            StatusMessage = $"Screen '{SelectedScreen?.Name}' saved.";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
+    private void DeleteScreen()
+    {
+        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        {
+            return;
+        }
+
+        if (!dialogs.Confirm($"Delete the screen '{screen.Name}' and its locations?", "AutoPlay"))
+        {
+            return;
+        }
+
+        store.DeleteScreen(profile.Id, screen.Id);
+        ReloadScreens();
+        StatusMessage = $"Screen '{screen.Name}' deleted.";
     }
 
     private bool CanCreateProfile() =>
@@ -78,6 +152,11 @@ public sealed partial class MainViewModel(IProfileStore store) : ObservableObjec
     private void DeleteProfile()
     {
         if (SelectedProfile is not { } profile)
+        {
+            return;
+        }
+
+        if (!dialogs.Confirm($"Delete the profile '{profile.Name}' with all its screens and sequences?", "AutoPlay"))
         {
             return;
         }

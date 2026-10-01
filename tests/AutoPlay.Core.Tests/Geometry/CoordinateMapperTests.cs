@@ -13,8 +13,24 @@ public class CoordinateMapperTests
 
         var normalized = CoordinateMapper.ToNormalized(point, Region);
 
-        Assert.Equal(new NormalizedPoint(0.5, 0.5), normalized);
         Assert.Equal(point, CoordinateMapper.ToPixel(normalized, Region));
+    }
+
+    [Fact]
+    public void Point_is_normalized_from_the_pixel_center()
+    {
+        var normalized = CoordinateMapper.ToNormalized(new PixelPoint(100, 50), new PixelRect(100, 50, 10, 4));
+
+        Assert.Equal(new NormalizedPoint(0.05, 0.125), normalized);
+    }
+
+    [Fact]
+    public void Point_scales_proportionally_and_stays_inside_the_region()
+    {
+        var region = new PixelRect(0, 0, 100, 100);
+
+        Assert.Equal(new PixelPoint(49, 49), CoordinateMapper.ToPixel(new NormalizedPoint(0.495, 0.495), region));
+        Assert.Equal(new PixelPoint(99, 99), CoordinateMapper.ToPixel(new NormalizedPoint(1, 1), region));
     }
 
     [Fact]

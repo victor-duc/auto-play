@@ -45,9 +45,15 @@
                 <DockPanel Grid.Row="0">
                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Text="Screens" />
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="Record screen" IsEnabled="False" ToolTip="Coming next: screen recording." />
+                        <Button Content="Record screen" Command="{Binding RecordScreenCommand}"
+                                ToolTip="Frame the target area, capture it and define its click locations." />
+                        <Button Content="Edit" Command="{Binding EditScreenCommand}" ToolTip="Edit the locations of the selected screen (double-click)." />
+                        <Button Content="Delete" Command="{Binding DeleteScreenCommand}" />
                     </StackPanel>
-                    <ListBox ItemsSource="{Binding Screens}">
+                    <ListBox ItemsSource="{Binding Screens}" SelectedItem="{Binding SelectedScreen}">
+                        <ListBox.InputBindings>
+                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditScreenCommand}" />
+                        </ListBox.InputBindings>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>
