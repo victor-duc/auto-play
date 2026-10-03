@@ -11,6 +11,7 @@
     <Project Path="tests/AutoPlay.Adapters.Persistence.Tests/AutoPlay.Adapters.Persistence.Tests.csproj" />
     <Project Path="tests/AutoPlay.Adapters.Vision.Tests/AutoPlay.Adapters.Vision.Tests.csproj" />
     <Project Path="tests/AutoPlay.Application.Tests/AutoPlay.Application.Tests.csproj" />
+    <Project Path="tests/AutoPlay.ArchitectureTests/AutoPlay.ArchitectureTests.csproj" />
     <Project Path="tests/AutoPlay.Domain.Tests/AutoPlay.Domain.Tests.csproj" />
   </Folder>
 </Solution>
