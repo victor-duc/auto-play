@@ -1,14 +1,16 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/AutoPlay.Adapters.Persistence/AutoPlay.Adapters.Persistence.csproj" />
+    <Project Path="src/AutoPlay.Adapters.Vision/AutoPlay.Adapters.Vision.csproj" />
+    <Project Path="src/AutoPlay.Adapters.Windows/AutoPlay.Adapters.Windows.csproj" />
     <Project Path="src/AutoPlay.App/AutoPlay.App.csproj" />
-    <Project Path="src/AutoPlay.Core/AutoPlay.Core.csproj" />
+    <Project Path="src/AutoPlay.Application/AutoPlay.Application.csproj" />
     <Project Path="src/AutoPlay.Domain/AutoPlay.Domain.csproj" />
-    <Project Path="src/AutoPlay.Vision/AutoPlay.Vision.csproj" />
-    <Project Path="src/AutoPlay.Windows/AutoPlay.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/AutoPlay.Core.Tests/AutoPlay.Core.Tests.csproj" />
+    <Project Path="tests/AutoPlay.Adapters.Persistence.Tests/AutoPlay.Adapters.Persistence.Tests.csproj" />
+    <Project Path="tests/AutoPlay.Adapters.Vision.Tests/AutoPlay.Adapters.Vision.Tests.csproj" />
+    <Project Path="tests/AutoPlay.Application.Tests/AutoPlay.Application.Tests.csproj" />
     <Project Path="tests/AutoPlay.Domain.Tests/AutoPlay.Domain.Tests.csproj" />
-    <Project Path="tests/AutoPlay.Vision.Tests/AutoPlay.Vision.Tests.csproj" />
   </Folder>
 </Solution>

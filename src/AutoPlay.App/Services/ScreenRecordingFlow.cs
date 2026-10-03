@@ -1,9 +1,8 @@
 using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Abstractions;
+using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Model;
-using AutoPlay.Core.Storage;
 
 namespace AutoPlay.App.Services;
 
@@ -18,7 +17,7 @@ public sealed class ScreenRecordingFlow(IScreenCapture screenCapture, IProfileSt
     public async Task<bool> RecordNewAsync(Profile profile, IReadOnlyList<string> otherScreenNames)
     {
         // The main window is hidden so that it does not cover the target area or appear in the capture.
-        var mainWindow = Application.Current.MainWindow;
+        var mainWindow = System.Windows.Application.Current.MainWindow;
         mainWindow.Hide();
         try
         {
@@ -53,7 +52,7 @@ public sealed class ScreenRecordingFlow(IScreenCapture screenCapture, IProfileSt
         var capture = store.LoadScreenCapture(profile.Id, screen.Id);
         var editor = new ScreenEditorWindow(new ScreenEditorViewModel(store, dialogs, profile.Id, capture, screen, otherScreenNames))
         {
-            Owner = Application.Current.MainWindow,
+            Owner = System.Windows.Application.Current.MainWindow,
         };
         return editor.ShowDialog() == true;
     }

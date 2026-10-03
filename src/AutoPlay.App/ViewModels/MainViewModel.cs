@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using AutoPlay.App.Services;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Sequencing;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.Ports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 

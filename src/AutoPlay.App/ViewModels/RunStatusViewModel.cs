@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows.Threading;
-using AutoPlay.Core.Execution;
+using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.Ports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 

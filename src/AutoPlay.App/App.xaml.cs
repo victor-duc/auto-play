@@ -4,18 +4,19 @@ using System.Windows.Threading;
 using AutoPlay.App.Services;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Execution;
-using AutoPlay.Core.Storage;
-using AutoPlay.Vision;
-using AutoPlay.Windows.Capture;
-using AutoPlay.Windows.Input;
-using AutoPlay.Windows.Power;
+using AutoPlay.Adapters.Persistence;
+using AutoPlay.Application.Ports;
+using AutoPlay.Application.Execution;
+using AutoPlay.Adapters.Vision;
+using AutoPlay.Adapters.Windows.Capture;
+using AutoPlay.Adapters.Windows.Input;
+using AutoPlay.Adapters.Windows.Power;
+using AutoPlay.Adapters.Windows.Time;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoPlay.App;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private ServiceProvider? _services;
 

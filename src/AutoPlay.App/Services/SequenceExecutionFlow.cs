@@ -2,11 +2,11 @@ using System.IO;
 using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Execution;
+using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Sequencing;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.Ports;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoPlay.App.Services;
@@ -24,7 +24,7 @@ public sealed class SequenceExecutionFlow(IProfileStore store, IUserDialogs dial
             return;
         }
 
-        var mainWindow = Application.Current.MainWindow;
+        var mainWindow = System.Windows.Application.Current.MainWindow;
         mainWindow.Hide();
         try
         {

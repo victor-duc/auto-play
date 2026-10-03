@@ -2,7 +2,7 @@ using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Domain.Model;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.Ports;
 
 namespace AutoPlay.App.Services;
 
@@ -13,7 +13,7 @@ public sealed class SequenceEditingFlow(IProfileStore store, IUserDialogs dialog
     public bool Edit(Profile profile, IReadOnlyList<Screen> screens, Sequence? sequence, IReadOnlyList<string> otherSequenceNames)
     {
         var viewModel = new SequenceEditorViewModel(store, dialogs, profile, screens, sequence, otherSequenceNames);
-        var editor = new SequenceEditorWindow(viewModel) { Owner = Application.Current.MainWindow };
+        var editor = new SequenceEditorWindow(viewModel) { Owner = System.Windows.Application.Current.MainWindow };
         return editor.ShowDialog() == true;
     }
 }
