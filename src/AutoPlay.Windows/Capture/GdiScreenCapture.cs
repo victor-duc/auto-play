@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
 using static AutoPlay.Windows.Interop.NativeMethods;
 
 namespace AutoPlay.Windows.Capture;

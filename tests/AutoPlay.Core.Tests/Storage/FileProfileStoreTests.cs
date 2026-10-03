@@ -1,6 +1,6 @@
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
 using AutoPlay.Core.Storage;
 using AutoPlay.Core.Tests.Fakes;
 

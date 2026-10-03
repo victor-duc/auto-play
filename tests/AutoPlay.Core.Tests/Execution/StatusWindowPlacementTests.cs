@@ -1,5 +1,5 @@
 using AutoPlay.Core.Execution;
-using AutoPlay.Core.Geometry;
+using AutoPlay.Domain.Geometry;
 
 namespace AutoPlay.Core.Tests.Execution;
 

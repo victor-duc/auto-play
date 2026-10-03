@@ -3,9 +3,9 @@ using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Core.Execution;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Sequencing;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
+using AutoPlay.Domain.Sequencing;
 using AutoPlay.Core.Storage;
 using Microsoft.Extensions.DependencyInjection;
 

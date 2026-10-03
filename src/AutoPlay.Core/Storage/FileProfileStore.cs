@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
 
 namespace AutoPlay.Core.Storage;
 

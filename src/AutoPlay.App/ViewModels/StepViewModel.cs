@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Windows.Media.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoPlay.App.ViewModels;

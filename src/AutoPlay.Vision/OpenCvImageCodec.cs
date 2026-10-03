@@ -1,5 +1,5 @@
 using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Imaging;
+using AutoPlay.Domain.Imaging;
 using OpenCvSharp;
 
 namespace AutoPlay.Vision;

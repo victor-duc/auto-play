@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using AutoPlay.App.ViewModels;
 using AutoPlay.Core.Execution;
-using AutoPlay.Core.Geometry;
+using AutoPlay.Domain.Geometry;
 using AutoPlay.Windows.Hotkeys;
 using AutoPlay.Windows.Windowing;
 

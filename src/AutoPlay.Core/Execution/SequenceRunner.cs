@@ -1,7 +1,7 @@
 using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
 
 namespace AutoPlay.Core.Execution;
 

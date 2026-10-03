@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AutoPlay.Domain\AutoPlay.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="AutoPlay.Core.Tests" />
   </ItemGroup>
 

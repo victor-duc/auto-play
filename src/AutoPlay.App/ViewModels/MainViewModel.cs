@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using AutoPlay.App.Services;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Sequencing;
+using AutoPlay.Domain.Model;
+using AutoPlay.Domain.Sequencing;
 using AutoPlay.Core.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

@@ -1,5 +1,5 @@
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
 
 namespace AutoPlay.Core.Abstractions;
 

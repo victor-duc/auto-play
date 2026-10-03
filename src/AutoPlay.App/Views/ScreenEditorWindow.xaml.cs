@@ -3,8 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AutoPlay.App.ViewModels;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Recording;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Recording;
 
 namespace AutoPlay.App.Views;
 

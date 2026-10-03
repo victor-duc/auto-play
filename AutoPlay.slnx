@@ -2,11 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/AutoPlay.App/AutoPlay.App.csproj" />
     <Project Path="src/AutoPlay.Core/AutoPlay.Core.csproj" />
+    <Project Path="src/AutoPlay.Domain/AutoPlay.Domain.csproj" />
     <Project Path="src/AutoPlay.Vision/AutoPlay.Vision.csproj" />
     <Project Path="src/AutoPlay.Windows/AutoPlay.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AutoPlay.Core.Tests/AutoPlay.Core.Tests.csproj" />
+    <Project Path="tests/AutoPlay.Domain.Tests/AutoPlay.Domain.Tests.csproj" />
     <Project Path="tests/AutoPlay.Vision.Tests/AutoPlay.Vision.Tests.csproj" />
   </Folder>
 </Solution>

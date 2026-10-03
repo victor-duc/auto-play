@@ -1,4 +1,4 @@
-using AutoPlay.Core.Imaging;
+using AutoPlay.Domain.Imaging;
 
 namespace AutoPlay.Core.Abstractions;
 

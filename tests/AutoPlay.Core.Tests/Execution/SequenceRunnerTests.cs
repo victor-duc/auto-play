@@ -1,8 +1,8 @@
 using AutoPlay.Core.Abstractions;
 using AutoPlay.Core.Execution;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
 using AutoPlay.Core.Tests.Fakes;
 
 namespace AutoPlay.Core.Tests.Execution;

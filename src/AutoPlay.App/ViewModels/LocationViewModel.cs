@@ -1,6 +1,6 @@
 using System.Globalization;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Recording;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Recording;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoPlay.App.ViewModels;

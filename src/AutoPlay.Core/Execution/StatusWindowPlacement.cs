@@ -1,4 +1,4 @@
-using AutoPlay.Core.Geometry;
+using AutoPlay.Domain.Geometry;
 
 namespace AutoPlay.Core.Execution;
 

@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Geometry;
+using AutoPlay.Domain.Geometry;
 using static AutoPlay.Windows.Interop.NativeMethods;
 
 namespace AutoPlay.Windows.Input;

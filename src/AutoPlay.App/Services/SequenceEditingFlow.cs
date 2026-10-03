@@ -1,7 +1,7 @@
 using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Model;
 using AutoPlay.Core.Storage;
 
 namespace AutoPlay.App.Services;
