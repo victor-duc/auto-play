@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using AutoPlay.App.Imaging;
 using AutoPlay.App.Services;
 using AutoPlay.Domain.Model;
@@ -190,7 +189,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         {
             _store.SaveSequence(_profile.Id, sequence);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (PersistenceException ex)
         {
             ErrorMessage = $"The sequence could not be saved: {ex.Message}";
             return;
@@ -272,7 +271,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         {
             return _store.LoadLocationTemplate(_profile.Id, screen.Id, location.Id).ToBitmapSource();
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (PersistenceException)
         {
             return null;
         }

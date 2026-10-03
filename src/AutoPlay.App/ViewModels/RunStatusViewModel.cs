@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Windows.Threading;
 using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
@@ -212,7 +211,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
         {
             LogImagePath = _store.SaveLogImage(_profile.Id, $"{_sequence.Name}-step{result.Position.StepIndex + 1}", image);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (PersistenceException ex)
         {
             Message += $" (The capture could not be saved: {ex.Message})";
         }

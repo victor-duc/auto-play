@@ -1,4 +1,3 @@
-using System.IO;
 using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
@@ -76,7 +75,7 @@ public sealed class SequenceExecutionFlow(IProfileStore store, IUserDialogs dial
                 assets[screenId] = new ScreenAssets(screen, templates);
             }
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (PersistenceException ex)
         {
             dialogs.ShowError($"The images of the sequence could not be loaded: {ex.Message}");
             return null;

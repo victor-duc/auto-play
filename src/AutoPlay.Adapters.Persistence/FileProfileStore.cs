@@ -14,6 +14,7 @@ namespace AutoPlay.Adapters.Persistence;
 ///                  /logs/*.png
 /// </code>
 /// </summary>
+/// <remarks>Input/output, JSON and image errors are reported as <see cref="PersistenceException"/>.</remarks>
 public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : IProfileStore
 {
     private const string ProfileFileName = "profile.json";
@@ -22,7 +23,43 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
 
     public string RootPath { get; } = rootPath;
 
-    public IReadOnlyList<Profile> LoadProfiles()
+    public IReadOnlyList<Profile> LoadProfiles() =>
+        Guard(() => LoadProfilesCore(), "The profiles could not be loaded");
+
+    public void SaveProfile(Profile profile) =>
+        Guard(() => SaveProfileCore(profile), "The profile could not be saved");
+
+    public void DeleteProfile(Guid profileId) =>
+        Guard(() => DeleteProfileCore(profileId), "The profile could not be deleted");
+
+    public IReadOnlyList<Screen> LoadScreens(Guid profileId) =>
+        Guard(() => LoadScreensCore(profileId), "The screens could not be loaded");
+
+    public void SaveScreen(Guid profileId, Screen screen, RawImage capture, IReadOnlyDictionary<Guid, RawImage> templates) =>
+        Guard(() => SaveScreenCore(profileId, screen, capture, templates), "The screen could not be saved");
+
+    public void DeleteScreen(Guid profileId, Guid screenId) =>
+        Guard(() => DeleteScreenCore(profileId, screenId), "The screen could not be deleted");
+
+    public RawImage LoadScreenCapture(Guid profileId, Guid screenId) =>
+        Guard(() => LoadScreenCaptureCore(profileId, screenId), "The screen capture could not be loaded");
+
+    public RawImage LoadLocationTemplate(Guid profileId, Guid screenId, Guid locationId) =>
+        Guard(() => LoadLocationTemplateCore(profileId, screenId, locationId), "The location image could not be loaded");
+
+    public IReadOnlyList<Sequence> LoadSequences(Guid profileId) =>
+        Guard(() => LoadSequencesCore(profileId), "The sequences could not be loaded");
+
+    public void SaveSequence(Guid profileId, Sequence sequence) =>
+        Guard(() => SaveSequenceCore(profileId, sequence), "The sequence could not be saved");
+
+    public void DeleteSequence(Guid profileId, Guid sequenceId) =>
+        Guard(() => DeleteSequenceCore(profileId, sequenceId), "The sequence could not be deleted");
+
+    public string SaveLogImage(Guid profileId, string name, RawImage image) =>
+        Guard(() => SaveLogImageCore(profileId, name, image), "The log image could not be saved");
+
+    private List<Profile> LoadProfilesCore()
     {
         if (!Directory.Exists(RootPath))
         {
@@ -37,12 +74,12 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
             .ToList();
     }
 
-    public void SaveProfile(Profile profile) =>
+    private void SaveProfileCore(Profile profile) =>
         WriteJson(Path.Combine(ProfileDirectory(profile.Id), ProfileFileName), profile);
 
-    public void DeleteProfile(Guid profileId) => DeleteDirectory(ProfileDirectory(profileId));
+    private void DeleteProfileCore(Guid profileId) => DeleteDirectory(ProfileDirectory(profileId));
 
-    public IReadOnlyList<Screen> LoadScreens(Guid profileId)
+    private List<Screen> LoadScreensCore(Guid profileId)
     {
         var screensDirectory = Path.Combine(ProfileDirectory(profileId), "screens");
         if (!Directory.Exists(screensDirectory))
@@ -58,7 +95,7 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
             .ToList();
     }
 
-    public void SaveScreen(Guid profileId, Screen screen, RawImage capture, IReadOnlyDictionary<Guid, RawImage> templates)
+    private void SaveScreenCore(Guid profileId, Screen screen, RawImage capture, IReadOnlyDictionary<Guid, RawImage> templates)
     {
         var missing = screen.Locations.FirstOrDefault(l => !templates.ContainsKey(l.Id));
         if (missing is not null)
@@ -81,15 +118,15 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
         WriteJson(Path.Combine(screenDirectory, ScreenFileName), screen);
     }
 
-    public void DeleteScreen(Guid profileId, Guid screenId) => DeleteDirectory(ScreenDirectory(profileId, screenId));
+    private void DeleteScreenCore(Guid profileId, Guid screenId) => DeleteDirectory(ScreenDirectory(profileId, screenId));
 
-    public RawImage LoadScreenCapture(Guid profileId, Guid screenId) =>
+    private RawImage LoadScreenCaptureCore(Guid profileId, Guid screenId) =>
         imageCodec.Decode(File.ReadAllBytes(Path.Combine(ScreenDirectory(profileId, screenId), CaptureFileName)));
 
-    public RawImage LoadLocationTemplate(Guid profileId, Guid screenId, Guid locationId) =>
+    private RawImage LoadLocationTemplateCore(Guid profileId, Guid screenId, Guid locationId) =>
         imageCodec.Decode(File.ReadAllBytes(Path.Combine(ScreenDirectory(profileId, screenId), "locations", $"{locationId}.png")));
 
-    public IReadOnlyList<Sequence> LoadSequences(Guid profileId)
+    private List<Sequence> LoadSequencesCore(Guid profileId)
     {
         var sequencesDirectory = Path.Combine(ProfileDirectory(profileId), "sequences");
         if (!Directory.Exists(sequencesDirectory))
@@ -103,10 +140,10 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
             .ToList();
     }
 
-    public void SaveSequence(Guid profileId, Sequence sequence) =>
+    private void SaveSequenceCore(Guid profileId, Sequence sequence) =>
         WriteJson(SequencePath(profileId, sequence.Id), sequence);
 
-    public void DeleteSequence(Guid profileId, Guid sequenceId)
+    private void DeleteSequenceCore(Guid profileId, Guid sequenceId)
     {
         var path = SequencePath(profileId, sequenceId);
         if (File.Exists(path))
@@ -115,7 +152,7 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
         }
     }
 
-    public string SaveLogImage(Guid profileId, string name, RawImage image)
+    private string SaveLogImageCore(Guid profileId, string name, RawImage image)
     {
         var logsDirectory = Path.Combine(ProfileDirectory(profileId), "logs");
         Directory.CreateDirectory(logsDirectory);
@@ -124,6 +161,25 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : 
         File.WriteAllBytes(path, imageCodec.EncodePng(image));
         return path;
     }
+
+    private static T Guard<T>(Func<T> action, string message)
+    {
+        try
+        {
+            return action();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or NotSupportedException)
+        {
+            throw new PersistenceException($"{message}: {ex.Message}", ex);
+        }
+    }
+
+    private static void Guard(Action action, string message) =>
+        Guard(() =>
+        {
+            action();
+            return true;
+        }, message);
 
     private string ProfileDirectory(Guid profileId) => Path.Combine(RootPath, profileId.ToString());
 

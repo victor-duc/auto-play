@@ -2,6 +2,7 @@ using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Adapters.Persistence;
+using AutoPlay.Application.Ports;
 using AutoPlay.Adapters.Persistence.Tests.Fakes;
 
 namespace AutoPlay.Adapters.Persistence.Tests;
@@ -128,5 +129,23 @@ public sealed class FileProfileStoreTests : IDisposable
         _store.DeleteProfile(profile.Id);
 
         Assert.Empty(_store.LoadProfiles());
+    }
+
+    [Fact]
+    public void Corrupted_json_is_reported_as_a_persistence_error()
+    {
+        var profile = new Profile { Name = "Broken" };
+        _store.SaveProfile(profile);
+        File.WriteAllText(Path.Combine(_root, profile.Id.ToString(), "profile.json"), "{ not json");
+
+        var error = Assert.Throws<PersistenceException>(() => _store.LoadProfiles());
+
+        Assert.StartsWith("The profiles could not be loaded", error.Message);
+    }
+
+    [Fact]
+    public void Missing_image_is_reported_as_a_persistence_error()
+    {
+        Assert.Throws<PersistenceException>(() => _store.LoadScreenCapture(Guid.NewGuid(), Guid.NewGuid()));
     }
 }

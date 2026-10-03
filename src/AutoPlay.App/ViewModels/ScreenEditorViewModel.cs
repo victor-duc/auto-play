@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Windows.Media.Imaging;
 using AutoPlay.App.Imaging;
 using AutoPlay.App.Services;
@@ -185,7 +184,7 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
         {
             _store.SaveScreen(_profileId, screen, _capture, templates);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (PersistenceException ex)
         {
             ErrorMessage = $"The screen could not be saved: {ex.Message}";
             return;
