@@ -399,7 +399,6 @@ with fakes, and a browser-based driver can be added later without changing it.
 - **Browser driver**: drive the browser through Playwright / Chrome DevTools Protocol, which
   allows background execution and a fixed viewport size.
 - **Additional actions**: keyboard input, drag, scroll, wait for a location to disappear.
-
 - **Settings screen**: edit the profile defaults (§6.2) and the emergency stop hotkey from the
   application.
 
