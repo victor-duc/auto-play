@@ -72,7 +72,8 @@
                         <Button Content="Edit" Command="{Binding EditSequenceCommand}" ToolTip="Edit the selected sequence (double-click)." />
                         <Button Content="Duplicate" Command="{Binding DuplicateSequenceCommand}" />
                         <Button Content="Delete" Command="{Binding DeleteSequenceCommand}" />
-                        <Button Content="Run" IsEnabled="False" ToolTip="Coming next: sequence execution." />
+                        <Button Content="Run" Command="{Binding RunSequenceCommand}" FontWeight="SemiBold"
+                                ToolTip="Frame the target area and run the selected sequence. F12 stops it; moving the mouse pauses it." />
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Sequences}" SelectedItem="{Binding SelectedSequence}">
                         <ListBox.InputBindings>

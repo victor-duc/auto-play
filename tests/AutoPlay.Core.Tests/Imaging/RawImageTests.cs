@@ -33,3 +33,33 @@ public class RawImageTests
         Assert.Throws<ArgumentOutOfRangeException>(() => TestImages.Gradient(10, 8).Crop(new PixelRect(8, 0, 4, 4)));
     }
 }
+
+public class RawImageDrawingTests
+{
+    [Fact]
+    public void WithRectangle_draws_the_outline_only_and_keeps_the_original()
+    {
+        var image = AutoPlay.Core.Tests.Fakes.TestImages.Solid(10, 10, 0);
+
+        var drawn = image.WithRectangle(new AutoPlay.Core.Geometry.PixelRect(2, 2, 6, 6), 255, 0, 0, thickness: 1);
+
+        Assert.Equal(255, Red(drawn, 2, 2));
+        Assert.Equal(255, Red(drawn, 7, 5));
+        Assert.Equal(0, Red(drawn, 4, 4)); // Inside the outline.
+        Assert.Equal(0, Red(drawn, 1, 1)); // Outside the rectangle.
+        Assert.Equal(0, Red(image, 2, 2)); // The original is not modified.
+    }
+
+    [Fact]
+    public void WithRectangle_is_clipped_to_the_image()
+    {
+        var image = AutoPlay.Core.Tests.Fakes.TestImages.Solid(10, 10, 0);
+
+        var drawn = image.WithRectangle(new AutoPlay.Core.Geometry.PixelRect(-5, -5, 30, 30), 255, 0, 0);
+
+        Assert.Equal(0, Red(drawn, 5, 5));
+    }
+
+    private static byte Red(AutoPlay.Core.Imaging.RawImage image, int x, int y) =>
+        image.Pixels[y * image.Stride + x * AutoPlay.Core.Imaging.RawImage.BytesPerPixel + 2];
+}

@@ -59,6 +59,7 @@ public partial class App : Application
         services.AddSingleton<IUserDialogs, MessageBoxDialogs>();
         services.AddSingleton<ScreenRecordingFlow>();
         services.AddSingleton<SequenceEditingFlow>();
+        services.AddSingleton<SequenceExecutionFlow>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
 
