@@ -15,7 +15,8 @@ namespace AutoPlay.Adapters.Persistence;
 /// </code>
 /// </summary>
 /// <remarks>Input/output, JSON and image errors are reported as <see cref="PersistenceException"/>.</remarks>
-public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec) : IProfileStore
+public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
+    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore
 {
     private const string ProfileFileName = "profile.json";
     private const string ScreenFileName = "screen.json";

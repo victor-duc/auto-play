@@ -1,15 +1,16 @@
 using System.Collections.ObjectModel;
 using AutoPlay.App.Services;
+using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
-using AutoPlay.Domain.Sequencing;
-using AutoPlay.Application.Ports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AutoPlay.App.ViewModels;
 
 public sealed partial class MainViewModel(
-    IProfileStore store,
+    ProfileService profileService,
+    ScreenService screenService,
+    SequenceService sequenceService,
     ScreenRecordingFlow screenRecording,
     SequenceEditingFlow sequenceEditing,
     SequenceExecutionFlow sequenceExecution,
@@ -43,7 +44,7 @@ public sealed partial class MainViewModel(
     public void Load()
     {
         Profiles.Clear();
-        foreach (var profile in store.LoadProfiles())
+        foreach (var profile in profileService.GetProfiles())
         {
             Profiles.Add(profile);
         }
@@ -66,16 +67,13 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        foreach (var sequence in store.LoadSequences(SelectedProfile.Id))
+        foreach (var sequence in sequenceService.GetSequences(SelectedProfile.Id))
         {
             Sequences.Add(sequence);
         }
 
         SelectedSequence = Sequences.FirstOrDefault(s => s.Id == sequenceToSelect);
     }
-
-    private List<string> OtherSequenceNames(Sequence? except) =>
-        Sequences.Where(s => s.Id != except?.Id).Select(s => s.Name).ToList();
 
     private bool CanCreateSequence() => SelectedProfile is not null;
 
@@ -88,7 +86,7 @@ public sealed partial class MainViewModel(
         }
 
         var knownIds = Sequences.Select(s => s.Id).ToHashSet();
-        if (sequenceEditing.Edit(profile, [.. Screens], null, OtherSequenceNames(null)))
+        if (sequenceEditing.Edit(profile, null))
         {
             ReloadSequences();
             SelectedSequence = Sequences.FirstOrDefault(s => !knownIds.Contains(s.Id));
@@ -106,7 +104,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        if (sequenceEditing.Edit(profile, [.. Screens], sequence, OtherSequenceNames(sequence)))
+        if (sequenceEditing.Edit(profile, sequence))
         {
             ReloadSequences(sequence.Id);
             StatusMessage = $"Sequence '{SelectedSequence?.Name}' saved.";
@@ -133,29 +131,13 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        var names = Sequences.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var name = $"{sequence.Name} (copy)";
-        for (var i = 2; names.Contains(name); i++)
+        var result = sequenceService.Duplicate(profile.Id, sequence.Id);
+        if (!result.Succeeded || result.Value is not { } copy)
         {
-            name = $"{sequence.Name} (copy {i})";
+            dialogs.ShowError(string.Join(Environment.NewLine, result.Errors));
+            return;
         }
 
-        var copy = new Sequence
-        {
-            Name = name,
-            RepeatCount = sequence.RepeatCount,
-            Steps = sequence.Steps
-                .Select(s => new SequenceStep
-                {
-                    ScreenId = s.ScreenId,
-                    LocationId = s.LocationId,
-                    Delay = s.Delay,
-                    VerificationTimeoutMs = s.VerificationTimeoutMs,
-                    Verify = s.Verify,
-                })
-                .ToList(),
-        };
-        store.SaveSequence(profile.Id, copy);
         ReloadSequences(copy.Id);
         StatusMessage = $"Sequence '{copy.Name}' created.";
     }
@@ -173,7 +155,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        store.DeleteSequence(profile.Id, sequence.Id);
+        sequenceService.Delete(profile.Id, sequence.Id);
         ReloadSequences();
         StatusMessage = $"Sequence '{sequence.Name}' deleted.";
     }
@@ -186,16 +168,13 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        foreach (var screen in store.LoadScreens(SelectedProfile.Id))
+        foreach (var screen in screenService.GetScreens(SelectedProfile.Id))
         {
             Screens.Add(screen);
         }
 
         SelectedScreen = Screens.FirstOrDefault(s => s.Id == screenToSelect);
     }
-
-    private List<string> OtherScreenNames(Screen? except) =>
-        Screens.Where(s => s.Id != except?.Id).Select(s => s.Name).ToList();
 
     private bool CanRecordScreen() => SelectedProfile is not null;
 
@@ -208,7 +187,7 @@ public sealed partial class MainViewModel(
         }
 
         var knownIds = Screens.Select(s => s.Id).ToHashSet();
-        if (await screenRecording.RecordNewAsync(profile, OtherScreenNames(null)))
+        if (await screenRecording.RecordNewAsync(profile))
         {
             ReloadScreens();
             var created = Screens.FirstOrDefault(s => !knownIds.Contains(s.Id));
@@ -227,7 +206,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        if (screenRecording.Edit(profile, screen, OtherScreenNames(screen)))
+        if (screenRecording.Edit(profile, screen))
         {
             ReloadScreens(screen.Id);
             StatusMessage = $"Screen '{SelectedScreen?.Name}' saved.";
@@ -242,7 +221,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        var usages = SequenceValidator.FindUsages(Sequences, screen.Id);
+        var usages = screenService.GetUsages(profile.Id, screen.Id);
         var warning = usages.Count == 0
             ? string.Empty
             : $"{Environment.NewLine}{Environment.NewLine}It is used by: {string.Join(", ", usages.Select(u => u.Name))}. "
@@ -252,7 +231,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        store.DeleteScreen(profile.Id, screen.Id);
+        screenService.DeleteScreen(profile.Id, screen.Id);
         ReloadScreens();
         StatusMessage = $"Screen '{screen.Name}' deleted.";
     }
@@ -264,8 +243,13 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(CanCreateProfile))]
     private void CreateProfile()
     {
-        var profile = new Profile { Name = NewProfileName.Trim() };
-        store.SaveProfile(profile);
+        var result = profileService.CreateProfile(NewProfileName);
+        if (!result.Succeeded || result.Value is not { } profile)
+        {
+            dialogs.ShowError(string.Join(Environment.NewLine, result.Errors));
+            return;
+        }
+
         Profiles.Add(profile);
         SelectedProfile = profile;
         NewProfileName = string.Empty;
@@ -287,7 +271,7 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        store.DeleteProfile(profile.Id);
+        profileService.DeleteProfile(profile.Id);
         Profiles.Remove(profile);
         SelectedProfile = Profiles.FirstOrDefault();
         StatusMessage = $"Profile '{profile.Name}' deleted.";

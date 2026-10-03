@@ -6,6 +6,7 @@ using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Adapters.Persistence;
 using AutoPlay.Application.Ports;
+using AutoPlay.Application.UseCases;
 using AutoPlay.Application.Execution;
 using AutoPlay.Adapters.Vision;
 using AutoPlay.Adapters.Windows.Capture;
@@ -45,18 +46,27 @@ public partial class App : System.Windows.Application
     {
         var services = new ServiceCollection();
 
-        // Platform services
+        // Driven adapters (implement the application ports)
         services.AddSingleton<IScreenCapture, GdiScreenCapture>();
         services.AddSingleton<IInputDriver, SendInputDriver>();
         services.AddSingleton<IPowerManager, WindowsPowerManager>();
         services.AddSingleton<ITemplateMatcher, OpenCvTemplateMatcher>();
-        services.AddSingleton<IImageCodec, OpenCvImageCodec>();
         services.AddSingleton<IClock>(SystemClock.Instance);
-        services.AddSingleton<IProfileStore>(sp => new FileProfileStore(DefaultProfilesPath, sp.GetRequiredService<IImageCodec>()));
+        services.AddSingleton(_ => new FileProfileStore(DefaultProfilesPath, new OpenCvImageCodec()));
+        services.AddSingleton<IProfileRepository>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<IScreenRepository>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<ISequenceRepository>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<IRunLogStore>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddTransient(_ => new Random());
+
+        // Application (use cases)
+        services.AddSingleton<ProfileService>();
+        services.AddSingleton<ScreenService>();
+        services.AddSingleton<SequenceService>();
+        services.AddSingleton<SequenceExecutionService>();
         services.AddTransient<SequenceRunner>();
 
-        // UI
+        // Driving adapter (WPF user interface)
         services.AddSingleton<IUserDialogs, MessageBoxDialogs>();
         services.AddSingleton<ScreenRecordingFlow>();
         services.AddSingleton<SequenceEditingFlow>();

@@ -5,6 +5,7 @@ using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
 using AutoPlay.Application.Ports;
+using AutoPlay.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -23,7 +24,7 @@ public enum RunState
 public sealed partial class RunStatusViewModel : ObservableObject
 {
     private readonly SequenceRunner _runner;
-    private readonly IProfileStore _store;
+    private readonly SequenceExecutionService _executionService;
     private readonly Profile _profile;
     private readonly Sequence _sequence;
     private readonly IReadOnlyDictionary<Guid, ScreenAssets> _screens;
@@ -36,14 +37,14 @@ public sealed partial class RunStatusViewModel : ObservableObject
 
     public RunStatusViewModel(
         SequenceRunner runner,
-        IProfileStore store,
+        SequenceExecutionService executionService,
         Profile profile,
         Sequence sequence,
         IReadOnlyDictionary<Guid, ScreenAssets> screens,
         PixelRect targetRegion)
     {
         _runner = runner;
-        _store = store;
+        _executionService = executionService;
         _profile = profile;
         _sequence = sequence;
         _screens = screens;
@@ -201,15 +202,9 @@ public sealed partial class RunStatusViewModel : ObservableObject
 
     private void SaveFailureImage(RunResult result)
     {
-        if (result.LastCapture is not { } capture)
-        {
-            return;
-        }
-
-        var image = result.ExpectedBounds is { } expected ? capture.WithRectangle(expected, 255, 0, 0) : capture;
         try
         {
-            LogImagePath = _store.SaveLogImage(_profile.Id, $"{_sequence.Name}-step{result.Position.StepIndex + 1}", image);
+            LogImagePath = _executionService.SaveFailureCapture(_profile.Id, _sequence, result);
         }
         catch (PersistenceException ex)
         {
