@@ -90,17 +90,28 @@ its stored capture, to add, edit or remove locations; **Delete** removes it afte
 
 ## 4. Building a sequence
 
-The sequence editor is a regular window of the main application.
+From the main window, **New sequence**, **Edit** (or a double-click), **Duplicate** and **Delete**
+manage the sequences of the selected profile. The sequence editor is a dialog window:
 
-- A sequence has a name, a **repeat count** (1 by default, 0 = until stopped) and an ordered list
-  of steps.
-- A step is added by picking a screen, then one of its locations.
-- Steps can be reordered (drag-and-drop or up/down buttons), duplicated and deleted.
-- Each step may override:
-  - the delay before the click (min/max, ms) — defaults to the screen's values;
-  - the verification timeout (ms) — defaults to the profile's value;
-  - whether verification is enabled — defaults to enabled.
-- The editor shows the location's template image next to each step.
+- **Toolbar**: sequence name (required, unique within the profile, ignoring case), **repeat count**
+  (1 by default, 0 = until stopped), **Save** (Enter), **Cancel** (Esc) and the validation errors.
+- **Add a step** (right panel): pick a screen, then one of its locations, shown with its template
+  image; **Add step** (or a double-click on the location) inserts it after the selected step, or at
+  the end if no step is selected.
+- **Steps list**: number, template image, `Screen / Location` and a summary of the effective
+  settings (e.g. `Delay 800–1500 ms (screen default) · verified, timeout 10000 ms (default)`).
+  Steps whose screen or location was deleted are shown in red and must be removed before saving.
+- **Reorder / duplicate / delete**: **Move up** (Alt+Up), **Move down** (Alt+Down), **Duplicate**
+  (Ctrl+D) and **Delete** (Delete key) act on the selected step.
+- **Step settings** (below the list), for the selected step:
+  - **Custom delay before click** (min/max, ms) — otherwise the screen's default delay;
+  - **Verify the location before clicking** — enabled by default;
+  - **Custom timeout** (ms) for the verification — otherwise the profile's default.
+- **Save** checks the name, the repeat count, that there is at least one step, that every step refers
+  to an existing location and that custom delays and timeouts are valid.
+- **Cancel**, Esc or closing the window asks for confirmation if anything was changed.
+
+Deleting a screen used by sequences asks for confirmation and lists those sequences.
 
 ## 5. Executing a sequence
 
