@@ -68,10 +68,16 @@
                 <DockPanel Grid.Row="2">
                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Text="Sequences" />
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="New sequence" IsEnabled="False" ToolTip="Coming next: sequence editor." />
+                        <Button Content="New sequence" Command="{Binding NewSequenceCommand}" />
+                        <Button Content="Edit" Command="{Binding EditSequenceCommand}" ToolTip="Edit the selected sequence (double-click)." />
+                        <Button Content="Duplicate" Command="{Binding DuplicateSequenceCommand}" />
+                        <Button Content="Delete" Command="{Binding DeleteSequenceCommand}" />
                         <Button Content="Run" IsEnabled="False" ToolTip="Coming next: sequence execution." />
                     </StackPanel>
-                    <ListBox ItemsSource="{Binding Sequences}">
+                    <ListBox ItemsSource="{Binding Sequences}" SelectedItem="{Binding SelectedSequence}">
+                        <ListBox.InputBindings>
+                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditSequenceCommand}" />
+                        </ListBox.InputBindings>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>

@@ -1,13 +1,18 @@
 using System.Collections.ObjectModel;
 using AutoPlay.App.Services;
 using AutoPlay.Core.Model;
+using AutoPlay.Core.Sequencing;
 using AutoPlay.Core.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AutoPlay.App.ViewModels;
 
-public sealed partial class MainViewModel(IProfileStore store, ScreenRecordingFlow screenRecording, IUserDialogs dialogs) : ObservableObject
+public sealed partial class MainViewModel(
+    IProfileStore store,
+    ScreenRecordingFlow screenRecording,
+    SequenceEditingFlow sequenceEditing,
+    IUserDialogs dialogs) : ObservableObject
 {
     public ObservableCollection<Profile> Profiles { get; } = [];
 
@@ -16,12 +21,16 @@ public sealed partial class MainViewModel(IProfileStore store, ScreenRecordingFl
     public ObservableCollection<Sequence> Sequences { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(RecordScreenCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(RecordScreenCommand), nameof(NewSequenceCommand))]
     public partial Profile? SelectedProfile { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EditScreenCommand), nameof(DeleteScreenCommand))]
     public partial Screen? SelectedScreen { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EditSequenceCommand), nameof(DuplicateSequenceCommand), nameof(DeleteSequenceCommand))]
+    public partial Sequence? SelectedSequence { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateProfileCommand))]
@@ -45,16 +54,115 @@ public sealed partial class MainViewModel(IProfileStore store, ScreenRecordingFl
     partial void OnSelectedProfileChanged(Profile? value)
     {
         ReloadScreens();
+        ReloadSequences();
+    }
+
+    private void ReloadSequences(Guid? sequenceToSelect = null)
+    {
         Sequences.Clear();
-        if (value is null)
+        if (SelectedProfile is null)
         {
             return;
         }
 
-        foreach (var sequence in store.LoadSequences(value.Id))
+        foreach (var sequence in store.LoadSequences(SelectedProfile.Id))
         {
             Sequences.Add(sequence);
         }
+
+        SelectedSequence = Sequences.FirstOrDefault(s => s.Id == sequenceToSelect);
+    }
+
+    private List<string> OtherSequenceNames(Sequence? except) =>
+        Sequences.Where(s => s.Id != except?.Id).Select(s => s.Name).ToList();
+
+    private bool CanCreateSequence() => SelectedProfile is not null;
+
+    [RelayCommand(CanExecute = nameof(CanCreateSequence))]
+    private void NewSequence()
+    {
+        if (SelectedProfile is not { } profile)
+        {
+            return;
+        }
+
+        var knownIds = Sequences.Select(s => s.Id).ToHashSet();
+        if (sequenceEditing.Edit(profile, [.. Screens], null, OtherSequenceNames(null)))
+        {
+            ReloadSequences();
+            SelectedSequence = Sequences.FirstOrDefault(s => !knownIds.Contains(s.Id));
+            StatusMessage = $"Sequence '{SelectedSequence?.Name}' saved.";
+        }
+    }
+
+    private bool HasSelectedSequence() => SelectedSequence is not null;
+
+    [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
+    private void EditSequence()
+    {
+        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        {
+            return;
+        }
+
+        if (sequenceEditing.Edit(profile, [.. Screens], sequence, OtherSequenceNames(sequence)))
+        {
+            ReloadSequences(sequence.Id);
+            StatusMessage = $"Sequence '{SelectedSequence?.Name}' saved.";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
+    private void DuplicateSequence()
+    {
+        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        {
+            return;
+        }
+
+        var names = Sequences.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var name = $"{sequence.Name} (copy)";
+        for (var i = 2; names.Contains(name); i++)
+        {
+            name = $"{sequence.Name} (copy {i})";
+        }
+
+        var copy = new Sequence
+        {
+            Name = name,
+            RepeatCount = sequence.RepeatCount,
+            Steps = sequence.Steps
+                .Select(s => new SequenceStep
+                {
+                    ScreenId = s.ScreenId,
+                    LocationId = s.LocationId,
+                    Delay = s.Delay,
+                    VerificationTimeoutMs = s.VerificationTimeoutMs,
+                    Verify = s.Verify,
+                })
+                .ToList(),
+        };
+        store.SaveSequence(profile.Id, copy);
+        ReloadSequences(copy.Id);
+        StatusMessage = $"Sequence '{copy.Name}' created.";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
+    private void DeleteSequence()
+    {
+        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        {
+            return;
+        }
+
+        if (!dialogs.Confirm($"Delete the sequence '{sequence.Name}'?", "AutoPlay"))
+        {
+            return;
+        }
+
+        store.DeleteSequence(profile.Id, sequence.Id);
+        ReloadSequences();
+        StatusMessage = $"Sequence '{sequence.Name}' deleted.";
     }
 
     private void ReloadScreens(Guid? screenToSelect = null)
@@ -121,7 +229,12 @@ public sealed partial class MainViewModel(IProfileStore store, ScreenRecordingFl
             return;
         }
 
-        if (!dialogs.Confirm($"Delete the screen '{screen.Name}' and its locations?", "AutoPlay"))
+        var usages = SequenceValidator.FindUsages(Sequences, screen.Id);
+        var warning = usages.Count == 0
+            ? string.Empty
+            : $"{Environment.NewLine}{Environment.NewLine}It is used by: {string.Join(", ", usages.Select(u => u.Name))}. "
+              + "The steps using it will have to be removed from these sequences.";
+        if (!dialogs.Confirm($"Delete the screen '{screen.Name}' and its locations?{warning}", "AutoPlay"))
         {
             return;
         }
