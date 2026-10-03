@@ -12,7 +12,7 @@ public sealed class MessageBoxDialogs : IUserDialogs
 
     private static MessageBoxResult Show(string message, string title, MessageBoxButton buttons, MessageBoxImage image)
     {
-        var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+        var owner = System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
         return owner is null
             ? MessageBox.Show(message, title, buttons, image)
             : MessageBox.Show(owner, message, title, buttons, image);

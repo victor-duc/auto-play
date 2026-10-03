@@ -1,15 +1,14 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Windows.Media.Imaging;
 using AutoPlay.App.Imaging;
 using AutoPlay.App.Services;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Recording;
-using AutoPlay.Core.Storage;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
+using AutoPlay.Domain.Recording;
+using AutoPlay.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -18,28 +17,24 @@ namespace AutoPlay.App.ViewModels;
 /// <summary>Edits the locations of a screen on its frozen capture, for a new or an existing screen.</summary>
 public sealed partial class ScreenEditorViewModel : ObservableObject
 {
-    private readonly IProfileStore _store;
+    private readonly ScreenService _screenService;
     private readonly IUserDialogs _dialogs;
     private readonly Guid _profileId;
     private readonly Guid _screenId;
     private readonly RawImage _capture;
-    private readonly IReadOnlyList<string> _otherScreenNames;
 
     /// <param name="existingScreen">The screen to edit, or null to create a new one.</param>
-    /// <param name="otherScreenNames">Names of the other screens of the profile, which must not be reused.</param>
     public ScreenEditorViewModel(
-        IProfileStore store,
+        ScreenService screenService,
         IUserDialogs dialogs,
         Guid profileId,
         RawImage capture,
-        Screen? existingScreen,
-        IReadOnlyList<string> otherScreenNames)
+        Screen? existingScreen)
     {
-        _store = store;
+        _screenService = screenService;
         _dialogs = dialogs;
         _profileId = profileId;
         _capture = capture;
-        _otherScreenNames = otherScreenNames;
         _screenId = existingScreen?.Id ?? Guid.NewGuid();
 
         CaptureBitmap = capture.ToBitmapSource();
@@ -173,21 +168,10 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
             drafts.Add(draft);
         }
 
-        var errors = ScreenBuilder.Validate(ScreenName, drafts, CaptureSize, _otherScreenNames);
-        if (errors.Count > 0)
+        var result = _screenService.SaveScreen(_profileId, new ScreenDraft(_screenId, ScreenName, delay, _capture, drafts));
+        if (!result.Succeeded)
         {
-            ErrorMessage = string.Join(Environment.NewLine, errors);
-            return;
-        }
-
-        var (screen, templates) = ScreenBuilder.Build(_screenId, ScreenName, delay, _capture, drafts);
-        try
-        {
-            _store.SaveScreen(_profileId, screen, _capture, templates);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            ErrorMessage = $"The screen could not be saved: {ex.Message}";
+            ErrorMessage = string.Join(Environment.NewLine, result.Errors);
             return;
         }
 

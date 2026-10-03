@@ -311,45 +311,39 @@ The best score is always reported, so that thresholds can be tuned from real run
 - **Per-Monitor V2 DPI awareness** declared in the application manifest, so that WPF, capture and
   input all work in physical pixels with display scaling (125 %, 150 %…) and multiple monitors.
 
-### 8.2 Solution layout
+### 8.2 Hexagonal architecture
+
+The code follows a hexagonal architecture (ports and adapters), described in detail in
+[architecture.md](architecture.md):
 
 ```
 AutoPlay.slnx
 src/
-  AutoPlay.Core/        # No UI, no Win32
-    Abstractions/       #   Interfaces implemented by the platform projects (§8.3)
-    Execution/          #   Sequence engine (SequenceRunner), status window placement
-    Geometry/           #   Pixel and normalized coordinates, conversions
-    Imaging/            #   RawImage
-    Model/              #   Profile, Screen, Location, Sequence, SequenceStep
-    Recording/          #   Rectangle editing and screen validation/building (screen editor logic)
-    Sequencing/         #   Sequence validation
-    Storage/            #   JSON/PNG file store
-  AutoPlay.Vision/      # Template matching and PNG encoding (OpenCvSharp)
-  AutoPlay.Windows/     # Screen capture, mouse input, global hotkeys, power requests, window geometry
-  AutoPlay.App/         # WPF application
-    Services/           #   Flows opening the windows (recording, sequence editing, execution), dialogs
-    ViewModels/         #   MVVM view models
-    Views/              #   Main window, framing overlay, screen editor, sequence editor, status window
+  AutoPlay.Domain/               # Hexagon: model and business rules, no dependency
+  AutoPlay.Application/          # Hexagon: use cases (UseCases/), engine (Execution/), driven ports (Ports/)
+  AutoPlay.Adapters.Persistence/ # Driven adapter: JSON and PNG files
+  AutoPlay.Adapters.Vision/      # Driven adapter: OpenCV template matching
+  AutoPlay.Adapters.Windows/     # Driven adapters: capture, input, power, hotkeys, window geometry, clock
+  AutoPlay.App/                  # Driving adapter (WPF) and composition root
 tests/
-  AutoPlay.Core.Tests/
-  AutoPlay.Vision.Tests/
-.github/workflows/build.yml   # Build and test on Windows for pull requests and pushes to main
+  AutoPlay.Domain.Tests/
+  AutoPlay.Application.Tests/
+  AutoPlay.Adapters.Persistence.Tests/
+  AutoPlay.Adapters.Vision.Tests/
+  AutoPlay.ArchitectureTests/    # Enforces the dependency rules
+.github/workflows/build.yml      # Build and test on Windows for pull requests and pushes to main
 ```
 
-The editor and engine logic lives in `AutoPlay.Core` so that it is unit tested; the WPF code-behind
-only handles mouse and keyboard input and window placement.
+The Domain, Application, Persistence and Vision projects target `net10.0` and their tests run on any
+OS; the Windows adapter and the App target `net10.0-windows10.0.17763.0`. The editor and engine
+logic lives in the Domain and the Application so that it is unit tested; the WPF code-behind only
+handles mouse and keyboard input and window placement.
 
-`AutoPlay.Core` and `AutoPlay.Vision` target `net10.0` and their tests run on any OS; the Windows
-projects target `net10.0-windows10.0.17763.0`.
-
-### 8.3 Key abstractions (`AutoPlay.Core`)
+### 8.3 Key ports (`AutoPlay.Application.Ports`)
 
 ```csharp
-// 32-bit BGRA, top-down pixels: exchanged between capture, matching and storage
-// without depending on System.Drawing or WPF.
-public sealed class RawImage { /* Width, Height, Pixels, Crop(...), WithRectangle(...) */ }
-
+// Driven ports implemented by the adapters (persistence ports omitted:
+// IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore).
 public interface IScreenCapture
 {
     // Captures a rectangle of the physical screen, in physical pixels.
@@ -368,12 +362,6 @@ public interface ITemplateMatcher
     MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize);
 }
 
-public interface IImageCodec
-{
-    byte[] EncodePng(RawImage image);
-    RawImage Decode(byte[] data);
-}
-
 public interface IPowerManager
 {
     IDisposable PreventSleep();
@@ -386,8 +374,10 @@ public interface IClock
 }
 ```
 
-The sequence engine (`SequenceRunner`) only depends on these interfaces, so it can be unit tested
-with fakes, and a browser-based driver can be added later without changing it.
+`RawImage` (Domain) holds 32-bit BGRA, top-down pixels, so images are exchanged between capture,
+matching and storage without depending on System.Drawing or WPF. The sequence engine
+(`SequenceRunner`) only depends on these ports, so it is unit tested with fakes, and a browser-based
+driver can be added later as a new adapter.
 
 ## 9. Future evolutions
 

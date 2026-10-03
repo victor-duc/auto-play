@@ -1,5 +1,5 @@
 using System.Windows.Media.Imaging;
-using AutoPlay.Core.Model;
+using AutoPlay.Domain.Model;
 
 namespace AutoPlay.App.ViewModels;
 

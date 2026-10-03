@@ -1,30 +1,32 @@
-using System.IO;
-using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Execution;
-using AutoPlay.Core.Imaging;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Sequencing;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.Execution;
+using AutoPlay.Application.UseCases;
+using AutoPlay.Domain.Model;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoPlay.App.Services;
 
 /// <summary>Runs a sequence: loads its screens, lets the user frame the target region, then shows the run status.</summary>
-public sealed class SequenceExecutionFlow(IProfileStore store, IUserDialogs dialogs, IServiceProvider services)
+public sealed class SequenceExecutionFlow(
+    SequenceExecutionService executionService,
+    ProfileService profileService,
+    IUserDialogs dialogs,
+    IServiceProvider services)
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before the first capture.</summary>
     private static readonly TimeSpan StartDelay = TimeSpan.FromMilliseconds(300);
 
     public async Task RunAsync(Profile profile, Sequence sequence)
     {
-        if (LoadAssets(profile, sequence) is not { } screens)
+        var preparation = executionService.PrepareRun(profile.Id, sequence);
+        if (!preparation.Succeeded || preparation.Value is not { } screens)
         {
+            dialogs.ShowError(string.Join(Environment.NewLine, preparation.Errors));
             return;
         }
 
-        var mainWindow = Application.Current.MainWindow;
+        var mainWindow = System.Windows.Application.Current.MainWindow;
         mainWindow.Hide();
         try
         {
@@ -37,11 +39,11 @@ public sealed class SequenceExecutionFlow(IProfileStore store, IUserDialogs dial
                 return;
             }
 
-            profile.LastTargetRegion = region;
-            store.SaveProfile(profile);
+            profileService.RememberTargetRegion(profile, region);
             await Task.Delay(StartDelay);
 
-            var viewModel = new RunStatusViewModel(services.GetRequiredService<SequenceRunner>(), store, profile, sequence, screens, region);
+            var viewModel = new RunStatusViewModel(
+                services.GetRequiredService<SequenceRunner>(), executionService, profile, sequence, screens, region);
             new RunStatusWindow(viewModel, region).ShowDialog();
         }
         finally
@@ -49,39 +51,5 @@ public sealed class SequenceExecutionFlow(IProfileStore store, IUserDialogs dial
             mainWindow.Show();
             mainWindow.Activate();
         }
-    }
-
-    /// <summary>Loads the screens used by the sequence and their template images; reports problems to the user.</summary>
-    private Dictionary<Guid, ScreenAssets>? LoadAssets(Profile profile, Sequence sequence)
-    {
-        var screens = store.LoadScreens(profile.Id);
-        if (sequence.Steps.Count == 0 || sequence.Steps.Any(step => SequenceValidator.FindLocation(screens, step) is null))
-        {
-            dialogs.ShowError($"The sequence '{sequence.Name}' has no steps or refers to deleted screens or locations. Edit it first.");
-            return null;
-        }
-
-        var assets = new Dictionary<Guid, ScreenAssets>();
-        try
-        {
-            foreach (var screenId in sequence.Steps.Select(s => s.ScreenId).Distinct())
-            {
-                var screen = screens.First(s => s.Id == screenId);
-                var templates = new Dictionary<Guid, RawImage>();
-                foreach (var location in screen.Locations)
-                {
-                    templates[location.Id] = store.LoadLocationTemplate(profile.Id, screen.Id, location.Id);
-                }
-
-                assets[screenId] = new ScreenAssets(screen, templates);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
-        {
-            dialogs.ShowError($"The images of the sequence could not be loaded: {ex.Message}");
-            return null;
-        }
-
-        return assets;
     }
 }

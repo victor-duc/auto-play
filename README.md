@@ -153,23 +153,27 @@ dotnet build AutoPlay.slnx
 dotnet test AutoPlay.slnx
 ```
 
-The Core and Vision projects (and their tests) are cross-platform; the Windows and App projects build
-on any OS (`EnableWindowsTargeting`) but run only on Windows. Warnings are treated as errors.
-A GitHub Actions workflow builds and tests the solution on Windows for every pull request.
+The code follows a **hexagonal architecture** (ports and adapters): see
+[docs/architecture.md](docs/architecture.md). The Domain, Application, Persistence and Vision projects
+(and their tests) are cross-platform; the Windows adapter and the App build on any OS
+(`EnableWindowsTargeting`) but run only on Windows. Warnings are treated as errors. A GitHub Actions
+workflow builds and tests the solution on Windows for every pull request.
 
 | Project | Description |
 |---|---|
-| `src/AutoPlay.Core` | Domain model, JSON/PNG storage, sequence engine, recording and sequence validation (cross-platform). |
-| `src/AutoPlay.Vision` | Template matching and PNG encoding with OpenCvSharp (cross-platform). |
-| `src/AutoPlay.Windows` | Win32 screen capture, mouse input, power requests, global hotkeys and window geometry. |
-| `src/AutoPlay.App` | WPF application (main window, framing overlay, screen and sequence editors, status window). |
-| `tests/AutoPlay.Core.Tests` | Unit tests of the Core project. |
-| `tests/AutoPlay.Vision.Tests` | Unit tests of the image matching and codec. |
+| `src/AutoPlay.Domain` | Model and business rules (coordinates, rectangle editing, screen and sequence validation). No dependency. |
+| `src/AutoPlay.Application` | Use cases, sequence engine and the ports they need. Depends only on the Domain. |
+| `src/AutoPlay.Adapters.Persistence` | JSON/PNG file storage of profiles, screens, sequences and logs. |
+| `src/AutoPlay.Adapters.Vision` | Template matching with OpenCvSharp. |
+| `src/AutoPlay.Adapters.Windows` | Win32 screen capture, mouse input, power requests, global hotkeys, window geometry and clock. |
+| `src/AutoPlay.App` | WPF application (user interface) and composition root. |
+| `tests/AutoPlay.*.Tests` | Unit tests of each layer and adapter. |
+| `tests/AutoPlay.ArchitectureTests` | Checks the dependency rules of the architecture. |
 
 ## Documentation
 
-- [Specification](docs/specification.md): functional behavior, data model, image matching and
-  architecture.
+- [Specification](docs/specification.md): functional behavior, data model and image matching.
+- [Architecture](docs/architecture.md): layers, ports, adapters and dependency rules.
 
 ## Disclaimer
 

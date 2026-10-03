@@ -1,24 +1,22 @@
 using System.Windows;
 using AutoPlay.App.ViewModels;
 using AutoPlay.App.Views;
-using AutoPlay.Core.Abstractions;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Storage;
+using AutoPlay.Application.UseCases;
+using AutoPlay.Domain.Model;
 
 namespace AutoPlay.App.Services;
 
 /// <summary>Orchestrates the recording of a new screen (framing, capture, annotation) and the editing of an existing one.</summary>
-public sealed class ScreenRecordingFlow(IScreenCapture screenCapture, IProfileStore store, IUserDialogs dialogs)
+public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialogs dialogs)
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before capturing.</summary>
     private static readonly TimeSpan CaptureDelay = TimeSpan.FromMilliseconds(300);
 
     /// <summary>Records a new screen. Returns true if it was saved.</summary>
-    /// <param name="otherScreenNames">Names of the existing screens of the profile.</param>
-    public async Task<bool> RecordNewAsync(Profile profile, IReadOnlyList<string> otherScreenNames)
+    public async Task<bool> RecordNewAsync(Profile profile)
     {
         // The main window is hidden so that it does not cover the target area or appear in the capture.
-        var mainWindow = Application.Current.MainWindow;
+        var mainWindow = System.Windows.Application.Current.MainWindow;
         mainWindow.Hide();
         try
         {
@@ -32,12 +30,9 @@ public sealed class ScreenRecordingFlow(IScreenCapture screenCapture, IProfileSt
             }
 
             await Task.Delay(CaptureDelay);
-            var capture = screenCapture.Capture(region);
+            var capture = screenService.Capture(profile, region);
 
-            profile.LastTargetRegion = region;
-            store.SaveProfile(profile);
-
-            var editor = new ScreenEditorWindow(new ScreenEditorViewModel(store, dialogs, profile.Id, capture, null, otherScreenNames));
+            var editor = new ScreenEditorWindow(new ScreenEditorViewModel(screenService, dialogs, profile.Id, capture, null));
             return editor.ShowDialog() == true;
         }
         finally
@@ -48,12 +43,12 @@ public sealed class ScreenRecordingFlow(IScreenCapture screenCapture, IProfileSt
     }
 
     /// <summary>Edits the locations of an existing screen on its stored capture. Returns true if it was saved.</summary>
-    public bool Edit(Profile profile, Screen screen, IReadOnlyList<string> otherScreenNames)
+    public bool Edit(Profile profile, Screen screen)
     {
-        var capture = store.LoadScreenCapture(profile.Id, screen.Id);
-        var editor = new ScreenEditorWindow(new ScreenEditorViewModel(store, dialogs, profile.Id, capture, screen, otherScreenNames))
+        var capture = screenService.GetCapture(profile.Id, screen.Id);
+        var editor = new ScreenEditorWindow(new ScreenEditorViewModel(screenService, dialogs, profile.Id, capture, screen))
         {
-            Owner = Application.Current.MainWindow,
+            Owner = System.Windows.Application.Current.MainWindow,
         };
         return editor.ShowDialog() == true;
     }

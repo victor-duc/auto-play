@@ -2,12 +2,11 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using AutoPlay.App.Imaging;
 using AutoPlay.App.Services;
-using AutoPlay.Core.Model;
-using AutoPlay.Core.Sequencing;
-using AutoPlay.Core.Storage;
+using AutoPlay.Domain.Model;
+using AutoPlay.Application.Ports;
+using AutoPlay.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,29 +15,26 @@ namespace AutoPlay.App.ViewModels;
 /// <summary>Creates or edits a sequence of a profile.</summary>
 public sealed partial class SequenceEditorViewModel : ObservableObject
 {
-    private readonly IProfileStore _store;
+    private readonly SequenceService _sequenceService;
+    private readonly ScreenService _screenService;
     private readonly IUserDialogs _dialogs;
     private readonly Profile _profile;
-    private readonly IReadOnlyList<Screen> _screens;
-    private readonly IReadOnlyList<string> _otherSequenceNames;
     private readonly Guid _sequenceId;
 
     /// <param name="screens">The screens of the profile.</param>
     /// <param name="existingSequence">The sequence to edit, or null to create a new one.</param>
-    /// <param name="otherSequenceNames">Names of the other sequences of the profile, which must not be reused.</param>
     public SequenceEditorViewModel(
-        IProfileStore store,
+        SequenceService sequenceService,
+        ScreenService screenService,
         IUserDialogs dialogs,
         Profile profile,
         IReadOnlyList<Screen> screens,
-        Sequence? existingSequence,
-        IReadOnlyList<string> otherSequenceNames)
+        Sequence? existingSequence)
     {
-        _store = store;
+        _sequenceService = sequenceService;
+        _screenService = screenService;
         _dialogs = dialogs;
         _profile = profile;
-        _screens = screens;
-        _otherSequenceNames = otherSequenceNames;
         _sequenceId = existingSequence?.Id ?? Guid.NewGuid();
 
         Title = existingSequence is null ? "AutoPlay — New sequence" : $"AutoPlay — Edit sequence '{existingSequence.Name}'";
@@ -178,21 +174,11 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
             steps.Add(step);
         }
 
-        var errors = SequenceValidator.Validate(Name, repeatCount, steps, _screens, _otherSequenceNames);
-        if (errors.Count > 0)
+        var sequence = new Sequence { Id = _sequenceId, Name = Name, RepeatCount = repeatCount, Steps = steps };
+        var result = _sequenceService.Save(_profile.Id, sequence);
+        if (!result.Succeeded)
         {
-            ErrorMessage = string.Join(Environment.NewLine, errors);
-            return;
-        }
-
-        var sequence = new Sequence { Id = _sequenceId, Name = Name.Trim(), RepeatCount = repeatCount, Steps = steps };
-        try
-        {
-            _store.SaveSequence(_profile.Id, sequence);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            ErrorMessage = $"The sequence could not be saved: {ex.Message}";
+            ErrorMessage = string.Join(Environment.NewLine, result.Errors);
             return;
         }
 
@@ -270,9 +256,9 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     {
         try
         {
-            return _store.LoadLocationTemplate(_profile.Id, screen.Id, location.Id).ToBitmapSource();
+            return _screenService.GetTemplate(_profile.Id, screen.Id, location.Id).ToBitmapSource();
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (PersistenceException)
         {
             return null;
         }

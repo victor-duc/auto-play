@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Application: use cases and the ports they need (Ports). Depends only on the Domain;
+    adapters implement the ports and the UI drives the use cases.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>AutoPlay.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AutoPlay.Domain\AutoPlay.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

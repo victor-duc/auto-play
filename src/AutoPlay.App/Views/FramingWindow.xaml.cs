@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using AutoPlay.Core.Geometry;
-using AutoPlay.Windows.Windowing;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Adapters.Windows.Windowing;
 
 namespace AutoPlay.App.Views;
 

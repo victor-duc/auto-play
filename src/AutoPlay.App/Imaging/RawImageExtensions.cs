@@ -1,6 +1,6 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using AutoPlay.Core.Imaging;
+using AutoPlay.Domain.Imaging;
 
 namespace AutoPlay.App.Imaging;
 

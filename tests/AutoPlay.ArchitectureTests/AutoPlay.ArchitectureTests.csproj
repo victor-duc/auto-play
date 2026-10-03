@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AutoPlay.Domain\AutoPlay.Domain.csproj" />
+    <ProjectReference Include="..\..\src\AutoPlay.Application\AutoPlay.Application.csproj" />
+    <ProjectReference Include="..\..\src\AutoPlay.Adapters.Persistence\AutoPlay.Adapters.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\AutoPlay.Adapters.Vision\AutoPlay.Adapters.Vision.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

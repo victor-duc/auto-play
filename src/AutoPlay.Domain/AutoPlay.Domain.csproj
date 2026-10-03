@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain: entities, value objects and business rules. No dependency on any other project or package. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>AutoPlay.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

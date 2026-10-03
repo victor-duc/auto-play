@@ -10,9 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AutoPlay.Core\AutoPlay.Core.csproj" />
-    <ProjectReference Include="..\AutoPlay.Vision\AutoPlay.Vision.csproj" />
-    <ProjectReference Include="..\AutoPlay.Windows\AutoPlay.Windows.csproj" />
+    <ProjectReference Include="..\AutoPlay.Application\AutoPlay.Application.csproj" />
+    <ProjectReference Include="..\AutoPlay.Adapters.Persistence\AutoPlay.Adapters.Persistence.csproj" />
+    <ProjectReference Include="..\AutoPlay.Adapters.Vision\AutoPlay.Adapters.Vision.csproj" />
+    <ProjectReference Include="..\AutoPlay.Adapters.Windows\AutoPlay.Adapters.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
