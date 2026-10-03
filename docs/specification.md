@@ -1,7 +1,8 @@
 # AutoPlay — Functional and Technical Specification
 
-> Status: draft for version 1 (V1). This document records the decisions made so far and the
-> points still open. It is the reference for implementation.
+> Status: version 1 (V1) implemented. This document describes the behavior of the application and
+> the decisions behind it; it is updated with each change. For installation and day-to-day use, see
+> the [README](../README.md).
 
 ## 1. Purpose
 
@@ -183,16 +184,16 @@ together with the recorded region size in pixels.
 - **Sleep prevention**: while a sequence runs, the application holds a Windows power request
   (`PowerCreateRequest` / `PowerSetRequest` with `PowerRequestSystemRequired` and
   `PowerRequestDisplayRequired`) so that the PC neither sleeps nor turns the display off. Unlike
-  `SetThreadExecutionState`, a power request is not tied to a thread, which suits asynchronous code. The previous state is restored when execution
-  ends, whatever the outcome. A locked session cannot be prevented if enforced by a group policy;
+  `SetThreadExecutionState`, a power request is not tied to a thread, which suits asynchronous code.
+  The request is released when execution ends, whatever the outcome. A locked session cannot be prevented if enforced by a group policy;
   capture and input do not work on a locked session, which results in a verification failure.
 
 ## 6. Data model and storage
 
 ### 6.1 Folder layout
 
-Data is stored as JSON and PNG files under a user-configurable root folder (default
-`%LOCALAPPDATA%\AutoPlay\Profiles`):
+Data is stored as JSON and PNG files under `%LOCALAPPDATA%\AutoPlay\Profiles` (not configurable
+in V1):
 
 ```
 Profiles/
@@ -207,10 +208,11 @@ Profiles/
     sequences/
       <sequence-id>.json
     logs/
-      <timestamp>-<sequence-id>.png
+      <yyyyMMdd-HHmmss>-<sequence name>-step<N>.png   # capture of a failed verification
 ```
 
-Identifiers are GUIDs; names are display values and can be renamed freely.
+Identifiers are GUIDs; names are display values and can be renamed freely. JSON files are written
+to a temporary file first, then moved, so that a crash never leaves a truncated file.
 
 ### 6.2 JSON schemas (illustrative)
 
@@ -225,10 +227,14 @@ Identifiers are GUIDs; names are display values and can be renamed freely.
     "verificationTimeoutMs": 10000,
     "retryIntervalMs": 250,
     "matchThreshold": 0.8,
-    "searchMargin": 0.5
+    "searchMargin": 0.5,
+    "userTakeoverTolerancePx": 10
   }
 }
 ```
+
+Profile defaults have no editing screen in V1: they can be changed in `profile.json` while the
+application is closed.
 
 `screen.json`
 
@@ -296,8 +302,12 @@ The best score is always reported, so that thresholds can be tuned from real run
 ### 8.1 Stack
 
 - **.NET 10** (LTS), C#, **WPF** for the user interface.
-- **OpenCvSharp4** (with the Windows runtime package) for image matching.
-- Win32 APIs through P/Invoke (or CsWin32) for capture, input, hotkeys and power management.
+- **OpenCvSharp4** (with the `OpenCvSharp4.runtime.win` native package) for image matching.
+- **CommunityToolkit.Mvvm** (MVVM source generators) and **Microsoft.Extensions.DependencyInjection**
+  in the WPF application.
+- Win32 APIs through source-generated P/Invoke (`LibraryImport`) for capture (GDI `BitBlt`), input
+  (`SendInput`), hotkeys (`RegisterHotKey`), window geometry and power management.
+- **xUnit** for tests; package versions are managed centrally in `Directory.Packages.props`.
 - **Per-Monitor V2 DPI awareness** declared in the application manifest, so that WPF, capture and
   input all work in physical pixels with display scaling (125 %, 150 %…) and multiple monitors.
 
@@ -306,14 +316,29 @@ The best score is always reported, so that thresholds can be tuned from real run
 ```
 AutoPlay.slnx
 src/
-  AutoPlay.Core/        # Domain model, storage, sequence engine, abstractions (no UI, no Win32)
+  AutoPlay.Core/        # No UI, no Win32
+    Abstractions/       #   Interfaces implemented by the platform projects (§8.3)
+    Execution/          #   Sequence engine (SequenceRunner), status window placement
+    Geometry/           #   Pixel and normalized coordinates, conversions
+    Imaging/            #   RawImage
+    Model/              #   Profile, Screen, Location, Sequence, SequenceStep
+    Recording/          #   Rectangle editing and screen validation/building (screen editor logic)
+    Sequencing/         #   Sequence validation
+    Storage/            #   JSON/PNG file store
   AutoPlay.Vision/      # Template matching and PNG encoding (OpenCvSharp)
-  AutoPlay.Windows/     # Screen capture, mouse input, global hotkeys, sleep prevention (Win32)
-  AutoPlay.App/         # WPF application (overlay, editors, status window)
+  AutoPlay.Windows/     # Screen capture, mouse input, global hotkeys, power requests, window geometry
+  AutoPlay.App/         # WPF application
+    Services/           #   Flows opening the windows (recording, sequence editing, execution), dialogs
+    ViewModels/         #   MVVM view models
+    Views/              #   Main window, framing overlay, screen editor, sequence editor, status window
 tests/
   AutoPlay.Core.Tests/
   AutoPlay.Vision.Tests/
+.github/workflows/build.yml   # Build and test on Windows for pull requests and pushes to main
 ```
+
+The editor and engine logic lives in `AutoPlay.Core` so that it is unit tested; the WPF code-behind
+only handles mouse and keyboard input and window placement.
 
 `AutoPlay.Core` and `AutoPlay.Vision` target `net10.0` and their tests run on any OS; the Windows
 projects target `net10.0-windows10.0.17763.0`.
@@ -323,7 +348,7 @@ projects target `net10.0-windows10.0.17763.0`.
 ```csharp
 // 32-bit BGRA, top-down pixels: exchanged between capture, matching and storage
 // without depending on System.Drawing or WPF.
-public sealed class RawImage { /* Width, Height, Pixels, Crop(...) */ }
+public sealed class RawImage { /* Width, Height, Pixels, Crop(...), WithRectangle(...) */ }
 
 public interface IScreenCapture
 {
@@ -375,9 +400,14 @@ with fakes, and a browser-based driver can be added later without changing it.
   allows background execution and a fixed viewport size.
 - **Additional actions**: keyboard input, drag, scroll, wait for a location to disappear.
 
-## 10. Open questions
+- **Settings screen**: edit the profile defaults (§6.2) and the emergency stop hotkey from the
+  application.
 
-1. Execution moves the real mouse, so the PC cannot be used during a run (other than to stop it).
-   Is this acceptable for V1? *Assumed yes.*
-2. Default emergency stop hotkey: F12 is assumed — it must not conflict with the target
-   application.
+## 10. Decisions and known limitations (V1)
+
+1. Execution moves the real mouse, so the PC cannot be used during a run, other than to stop or
+   pause it. Accepted for V1; moving the mouse pauses the run (§5.4).
+2. The emergency stop hotkey is fixed to **F12**. If another application has registered it, the
+   status window says so and the run must be stopped with the Stop button or by moving the mouse.
+3. Profile defaults and the data folder cannot be changed from the application (§6).
+4. Only the proportional positioning mode is implemented (§5.3).
