@@ -117,11 +117,14 @@ Deleting a screen used by sequences asks for confirmation and lists those sequen
 
 ### 5.1 Start
 
-1. The user selects a sequence and clicks **Run**.
-2. The framing overlay (§3.1) is shown at the last target region used by the profile, with a
-   **Start** button. The user adjusts it if the target application moved or was resized, then
-   confirms.
-3. The target region size may differ from the size at recording time; all coordinates are scaled
+1. The user selects a sequence and clicks **Run**. If the sequence has no steps, refers to deleted
+   screens or locations, or if template images cannot be loaded, an error is shown and nothing runs.
+2. The main window is hidden and the framing overlay (§3.1) is shown at the last target region used
+   by the profile, with a **Start** button. The user adjusts it if the target application moved or
+   was resized, then confirms (or cancels with Esc). The region is saved as the profile's last
+   target region.
+3. After 300 ms (for the overlay to disappear), the status window opens and the run starts.
+4. The target region size may differ from the size at recording time; all coordinates are scaled
    (§5.3).
 
 ### 5.2 Step algorithm
@@ -139,8 +142,22 @@ For each step:
    expected and the matched rectangle positions.
 5. Move the mouse to the click point and perform a left click.
 
-The current step, iteration and last match score are displayed in a small always-on-top status
-window.
+### 5.2.1 Status window
+
+A small always-on-top window shows the state (running, paused, stopped, completed, failed), the
+elapsed time, the iteration (`Iteration 2 / 5`, or `Iteration 2` when repeating until stopped), the
+current step (`Step 3 / 8: Screen / Location`) and the last match score.
+
+- It is placed next to the target region (right, left, below or above, whichever fits the monitor's
+  work area) so that it never covers it, and it is excluded from screen captures
+  (`SetWindowDisplayAffinity`, Windows 10 2004+).
+- **Stop (F12)** stops the run; **Resume** continues from the interrupted step after a stop, a pause
+  or a verification failure (the failed step is retried); **Close** returns to the main window.
+  Closing the window while running stops the run.
+- On a verification failure, the window turns red, shows the screen, location, best score and
+  threshold, and **View capture** opens the saved capture of the search area with the expected
+  position drawn in red.
+- When all iterations are done, the window turns green.
 
 ### 5.3 Coordinate scaling
 
@@ -157,9 +174,12 @@ together with the recorded region size in pixels.
 
 ### 5.4 Safety
 
-- **Emergency stop**: a global hotkey (default **F12**) stops execution immediately.
-- **User takeover**: if the mouse is moved by the user (position differs from the last position set
-  by AutoPlay by more than a few pixels), execution pauses and can be resumed or stopped.
+- **Emergency stop**: the global hotkey **F12** stops execution immediately, whichever window has
+  the focus. If F12 is already registered by another application, the status window says so and
+  the Stop button (or moving the mouse) must be used.
+- **User takeover**: before each click after the first one, if the mouse is more than 10 px away
+  from the last position set by AutoPlay, execution pauses and can be resumed or closed. Moving the
+  mouse to the status window is therefore enough to pause a run.
 - **Sleep prevention**: while a sequence runs, the application holds a Windows power request
   (`PowerCreateRequest` / `PowerSetRequest` with `PowerRequestSystemRequired` and
   `PowerRequestDisplayRequired`) so that the PC neither sleeps nor turns the display off. Unlike

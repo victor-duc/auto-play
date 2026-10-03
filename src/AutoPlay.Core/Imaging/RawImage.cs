@@ -55,4 +55,31 @@ public sealed class RawImage
 
         return new RawImage(area.Width, area.Height, result);
     }
+
+    /// <summary>Returns a copy with the outline of a rectangle drawn on it, clipped to the image.</summary>
+    public RawImage WithRectangle(PixelRect rect, byte red, byte green, byte blue, int thickness = 2)
+    {
+        var pixels = (byte[])Pixels.Clone();
+        var bounds = new PixelRect(0, 0, Width, Height);
+        var inner = rect.Inflate(-thickness, -thickness);
+        var area = rect.Intersect(bounds);
+        for (var y = area.Top; y < area.Bottom; y++)
+        {
+            for (var x = area.Left; x < area.Right; x++)
+            {
+                if (!inner.IsEmpty && inner.Contains(new PixelPoint(x, y)))
+                {
+                    continue;
+                }
+
+                var i = y * Stride + x * BytesPerPixel;
+                pixels[i] = blue;
+                pixels[i + 1] = green;
+                pixels[i + 2] = red;
+                pixels[i + 3] = 0xFF;
+            }
+        }
+
+        return new RawImage(Width, Height, pixels);
+    }
 }

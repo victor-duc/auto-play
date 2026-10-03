@@ -12,6 +12,7 @@ public sealed partial class MainViewModel(
     IProfileStore store,
     ScreenRecordingFlow screenRecording,
     SequenceEditingFlow sequenceEditing,
+    SequenceExecutionFlow sequenceExecution,
     IUserDialogs dialogs) : ObservableObject
 {
     public ObservableCollection<Profile> Profiles { get; } = [];
@@ -29,7 +30,7 @@ public sealed partial class MainViewModel(
     public partial Screen? SelectedScreen { get; set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(EditSequenceCommand), nameof(DuplicateSequenceCommand), nameof(DeleteSequenceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditSequenceCommand), nameof(DuplicateSequenceCommand), nameof(DeleteSequenceCommand), nameof(RunSequenceCommand))]
     public partial Sequence? SelectedSequence { get; set; }
 
     [ObservableProperty]
@@ -110,6 +111,18 @@ public sealed partial class MainViewModel(
             ReloadSequences(sequence.Id);
             StatusMessage = $"Sequence '{SelectedSequence?.Name}' saved.";
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
+    private async Task RunSequenceAsync()
+    {
+        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        {
+            return;
+        }
+
+        await sequenceExecution.RunAsync(profile, sequence);
+        StatusMessage = $"Sequence '{sequence.Name}' finished.";
     }
 
     [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
