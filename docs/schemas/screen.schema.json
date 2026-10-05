@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victor-duc/auto-play/docs/schemas/screen.schema.json",
+  "title": "AutoPlay screen",
+  "description": "screens/<screen-id>/screen.json: a named state of the target application and its click locations. Positions are fractions (0 to 1) of the target region.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "recordedRegionSize", "defaultDelay", "locations"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of the file format.",
+      "const": 1
+    },
+    "id": { "$ref": "#/$defs/guid" },
+    "name": {
+      "description": "Display name, unique among the screens of the profile (ignoring case).",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "recordedRegionSize": {
+      "description": "Size of the target region when the screen was recorded, in pixels; used to scale the template images.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "defaultDelay": {
+      "description": "Random delay before each click on this screen, unless a step overrides it.",
+      "$ref": "#/$defs/delayRange"
+    },
+    "locations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/location" }
+    }
+  },
+  "$defs": {
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "delayRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minMs", "maxMs"],
+      "properties": {
+        "minMs": { "type": "integer", "minimum": 0 },
+        "maxMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "location": {
+      "description": "A clickable element; the content of its bounds is its template image (locations/<location-id>.png).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "positioning", "bounds", "clickPoint", "matchThreshold"],
+      "properties": {
+        "id": { "$ref": "#/$defs/guid" },
+        "name": {
+          "description": "Display name, unique within the screen (ignoring case).",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "positioning": {
+          "description": "How the location follows the target region; only Proportional is implemented.",
+          "enum": ["Proportional", "Anchored"]
+        },
+        "bounds": {
+          "description": "Rectangle of the element, normalized from its edges.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y", "width", "height"],
+          "properties": {
+            "x": { "$ref": "#/$defs/fraction" },
+            "y": { "$ref": "#/$defs/fraction" },
+            "width": { "$ref": "#/$defs/fraction" },
+            "height": { "$ref": "#/$defs/fraction" }
+          }
+        },
+        "clickPoint": {
+          "description": "Point to click, normalized from the center of the pixel; within the bounds.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "$ref": "#/$defs/fraction" },
+            "y": { "$ref": "#/$defs/fraction" }
+          }
+        },
+        "matchThreshold": {
+          "description": "Minimum matching score for this location; null to use the profile default.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/fraction" }]
+        }
+      }
+    }
+  }
+}

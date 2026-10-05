@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victor-duc/auto-play/docs/schemas/profile.schema.json",
+  "title": "AutoPlay profile",
+  "description": "profile.json: a group of screens and sequences belonging to one target application.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "lastTargetRegion", "defaults"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of the file format.",
+      "const": 1
+    },
+    "id": { "$ref": "#/$defs/guid" },
+    "name": {
+      "description": "Display name, unique among profiles (ignoring case).",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "lastTargetRegion": {
+      "description": "Last region framed for recording or execution, in physical screen pixels; null if none yet.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["left", "top", "width", "height"],
+          "properties": {
+            "left": { "type": "integer" },
+            "top": { "type": "integer" },
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "defaults": {
+      "description": "Execution settings used when a step or location does not override them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verificationTimeoutMs", "retryIntervalMs", "matchThreshold", "searchMargin", "userTakeoverTolerancePx"],
+      "properties": {
+        "verificationTimeoutMs": {
+          "description": "Maximum time to wait for a location to appear, in milliseconds.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "retryIntervalMs": {
+          "description": "Time between two verification attempts, in milliseconds.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "matchThreshold": {
+          "description": "Minimum template matching score to accept a match.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "searchMargin": {
+          "description": "Fraction of the location size added on each side to build the search area.",
+          "type": "number",
+          "minimum": 0
+        },
+        "userTakeoverTolerancePx": {
+          "description": "Cursor distance, in pixels, beyond which a move is considered a user takeover.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  }
+}

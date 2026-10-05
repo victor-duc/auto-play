@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victor-duc/auto-play/docs/schemas/sequence.schema.json",
+  "title": "AutoPlay sequence",
+  "description": "sequences/<sequence-id>.json: an ordered list of clicks on screen locations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "repeatCount", "steps"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of the file format.",
+      "const": 1
+    },
+    "id": { "$ref": "#/$defs/guid" },
+    "name": {
+      "description": "Display name, unique among the sequences of the profile (ignoring case).",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "repeatCount": {
+      "description": "Number of times the steps are executed; 0 means until stopped.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "step": {
+      "description": "Clicks a location of a screen. Null settings inherit from the screen (delay) or the profile (timeout).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["screenId", "locationId", "delay", "verificationTimeoutMs", "verify"],
+      "properties": {
+        "screenId": { "$ref": "#/$defs/guid" },
+        "locationId": { "$ref": "#/$defs/guid" },
+        "delay": {
+          "description": "Random delay before the click; null to use the screen's default delay.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["minMs", "maxMs"],
+              "properties": {
+                "minMs": { "type": "integer", "minimum": 0 },
+                "maxMs": { "type": "integer", "minimum": 0 }
+              }
+            }
+          ]
+        },
+        "verificationTimeoutMs": {
+          "description": "Maximum time to wait for the location, in milliseconds; null to use the profile default.",
+          "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }]
+        },
+        "verify": {
+          "description": "Whether the template image must be found before clicking.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
