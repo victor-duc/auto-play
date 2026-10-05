@@ -214,12 +214,36 @@ Profiles/
 Identifiers are GUIDs; names are display values and can be renamed freely. JSON files are written
 to a temporary file first, then moved, so that a crash never leaves a truncated file.
 
-### 6.2 JSON schemas (illustrative)
+### 6.2 JSON format and schemas
+
+The JSON files follow published **JSON Schemas** (draft 2020-12), the reference for the format:
+
+| File | Schema |
+|---|---|
+| `profile.json` | [`docs/schemas/profile.schema.json`](schemas/profile.schema.json) |
+| `screens/<screen-id>/screen.json` | [`docs/schemas/screen.schema.json`](schemas/screen.schema.json) |
+| `sequences/<sequence-id>.json` | [`docs/schemas/sequence.schema.json`](schemas/sequence.schema.json) |
+
+- Property names are camelCase, enums are strings (`"Proportional"`), `null` values are written
+  explicitly, and unknown properties are rejected by the schemas.
+- Only the stored data is written: computed values (such as the right edge or the center of a
+  rectangle) are left out.
+- Every file starts with **`schemaVersion`**, the version of the format (currently **1**). Files
+  without it (version 0, written before versioning) are still read and are upgraded the next time
+  they are saved. Files with a higher version, written by a newer AutoPlay, are refused with an
+  explicit message instead of being misread.
+- Automated tests validate the files written by the application against the schemas, so the schemas
+  cannot drift from the code: adding a property to the model makes them fail until the schema (and,
+  if needed, the version) is updated.
+
+Examples:
+
 
 `profile.json`
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "6f1c…",
   "name": "Hero Wars",
   "lastTargetRegion": { "left": 120, "top": 95, "width": 1280, "height": 720 },
@@ -240,6 +264,7 @@ application is closed.
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "a2b9…",
   "name": "Campaign map",
   "recordedRegionSize": { "width": 1280, "height": 720 },
@@ -261,6 +286,7 @@ application is closed.
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "e5f6…",
   "name": "Daily campaign raids",
   "repeatCount": 1,

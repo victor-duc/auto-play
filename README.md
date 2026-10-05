@@ -136,6 +136,8 @@ the run), and keep the target application visible and the session unlocked.
 Everything is stored in `%LOCALAPPDATA%\AutoPlay\Profiles`, one folder per profile, as JSON and PNG
 files (see the [specification](docs/specification.md#6-data-model-and-storage)). Captures of failed
 verifications are saved in each profile's `logs` folder. Back up this folder to keep your profiles.
+The JSON format is versioned (`schemaVersion`) and described by JSON Schemas in
+[docs/schemas](docs/schemas).
 
 ### Troubleshooting
 

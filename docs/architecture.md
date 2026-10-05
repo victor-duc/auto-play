@@ -38,7 +38,7 @@ flowchart LR
 |---|---|---|
 | `AutoPlay.Domain` | Entities and value objects (`Profile`, `Screen`, `Location`, `Sequence`, geometry, `RawImage`) and pure business rules (coordinate scaling, rectangle editing, screen and sequence validation). | Nothing (base library only). |
 | `AutoPlay.Application` | **Use cases** (`UseCases/`), the sequence engine (`Execution/SequenceRunner`) and the **driven ports** (`Ports/`) the use cases need. | Domain only, no package. |
-| `AutoPlay.Adapters.Persistence` | Implements the persistence ports with JSON and PNG files; translates I/O errors into `PersistenceException`. | Application (and OpenCvSharp for PNG). |
+| `AutoPlay.Adapters.Persistence` | Implements the persistence ports with JSON and PNG files, in a versioned format described by the JSON Schemas of `docs/schemas`; translates I/O errors into `PersistenceException`. | Application (and OpenCvSharp for PNG). |
 | `AutoPlay.Adapters.Vision` | Implements `ITemplateMatcher` with OpenCV. | Application (and OpenCvSharp). |
 | `AutoPlay.Adapters.Windows` | Implements `IScreenCapture` (GDI), `IInputDriver` (`SendInput`), `IPowerManager` (power requests) and `IClock`; also provides the global hotkey and window geometry helpers used by the UI. | Application. |
 | `AutoPlay.App` | **Driving adapter**: WPF views and view models that call the use cases. Also the **composition root** (`App.xaml.cs`), the only place that knows the concrete adapters. | Everything. |
@@ -89,7 +89,7 @@ rule makes the build fail in CI.
 |---|---|
 | `AutoPlay.Domain.Tests` | Business rules, without any fake. |
 | `AutoPlay.Application.Tests` | Use cases and sequence engine, with in-memory fakes of the ports (`Fakes/`). |
-| `AutoPlay.Adapters.Persistence.Tests` | File store and PNG codec, on a temporary folder. |
+| `AutoPlay.Adapters.Persistence.Tests` | File store, PNG codec and file format: written files validated against the JSON Schemas, older and newer format versions. |
 | `AutoPlay.Adapters.Vision.Tests` | Template matching on synthetic images. |
 | `AutoPlay.ArchitectureTests` | Dependency rules. |
 

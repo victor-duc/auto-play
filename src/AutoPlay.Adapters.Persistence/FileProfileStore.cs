@@ -190,9 +190,7 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
     private string SequencePath(Guid profileId, Guid sequenceId) =>
         Path.Combine(ProfileDirectory(profileId), "sequences", $"{sequenceId}.json");
 
-    private static T ReadJson<T>(string path) =>
-        JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions.Default)
-        ?? throw new InvalidDataException($"The file '{path}' is empty.");
+    private static T ReadJson<T>(string path) => FileFormat.Deserialize<T>(File.ReadAllText(path), path);
 
     private static void WriteJson<T>(string path, T value)
     {
@@ -200,7 +198,7 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
 
         // Write to a temporary file first so that a crash never leaves a truncated file behind.
         var temporaryPath = path + ".tmp";
-        File.WriteAllText(temporaryPath, JsonSerializer.Serialize(value, JsonOptions.Default));
+        File.WriteAllText(temporaryPath, FileFormat.Serialize(value));
         File.Move(temporaryPath, path, overwrite: true);
     }
 
