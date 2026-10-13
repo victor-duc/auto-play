@@ -23,7 +23,7 @@ public class SequenceExecutionServiceTests
             _repository.Templates[(_screen.Id, location.Id)] = TestImages.Solid(4, 4);
         }
 
-        _service = new SequenceExecutionService(_repository, _repository, _repository);
+        _service = new SequenceExecutionService(_repository, _repository, _repository, runHistory: _repository);
     }
 
     private Sequence SequenceOn(params Guid[] locationIds) => new()
@@ -139,5 +139,33 @@ public class SequenceExecutionServiceTests
 
         Assert.Null(path);
         Assert.Empty(_repository.LogImages);
+    }
+
+    [Fact]
+    public void RecordRun_keeps_the_last_run_of_each_sequence()
+    {
+        var sequenceId = Guid.NewGuid();
+        var otherId = Guid.NewGuid();
+        var now = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+        _service.RecordRun(_profileId, sequenceId, new RunResult(RunStatus.Completed, default), now);
+        _service.RecordRun(_profileId, otherId, new RunResult(RunStatus.Completed, default), now);
+        _service.RecordRun(_profileId, sequenceId, new RunResult(RunStatus.VerificationFailed, default) { Message = "Not found" }, now.AddMinutes(1));
+
+        var lastRuns = _service.GetLastRuns(_profileId);
+        Assert.Equal(2, lastRuns.Count);
+        Assert.Equal(RunStatus.VerificationFailed, lastRuns[sequenceId].Status);
+        Assert.Equal("Not found", lastRuns[sequenceId].Message);
+        Assert.Equal(now.AddMinutes(1), lastRuns[sequenceId].EndedAt);
+    }
+
+    [Fact]
+    public void Run_history_errors_are_not_reported()
+    {
+        _repository.Failure = new PersistenceException("Disk full");
+
+        _service.RecordRun(_profileId, Guid.NewGuid(), new RunResult(RunStatus.Completed, default), DateTimeOffset.UtcNow);
+
+        Assert.Empty(_service.GetLastRuns(_profileId));
     }
 }

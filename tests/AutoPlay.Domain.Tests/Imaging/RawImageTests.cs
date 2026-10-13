@@ -62,4 +62,32 @@ public class RawImageDrawingTests
 
     private static byte Red(AutoPlay.Domain.Imaging.RawImage image, int x, int y) =>
         image.Pixels[y * image.Stride + x * AutoPlay.Domain.Imaging.RawImage.BytesPerPixel + 2];
+
+    [Fact]
+    public void ScaleDown_keeps_the_proportions_and_averages_the_pixels()
+    {
+        // 4 x 2 image: left half black, right half white.
+        var pixels = new byte[4 * 2 * 4];
+        for (var y = 0; y < 2; y++)
+        {
+            for (var x = 2; x < 4; x++)
+            {
+                Array.Fill(pixels, (byte)255, ((y * 4) + x) * 4, 4);
+            }
+        }
+
+        var scaled = new RawImage(4, 2, pixels).ScaleDown(2, 2);
+
+        Assert.Equal(new PixelSize(2, 1), scaled.Size);
+        Assert.Equal(0, scaled.Pixels[0]);
+        Assert.Equal(255, scaled.Pixels[4]);
+    }
+
+    [Fact]
+    public void ScaleDown_returns_the_image_when_it_already_fits()
+    {
+        var image = new RawImage(4, 2, new byte[4 * 2 * 4]);
+
+        Assert.Same(image, image.ScaleDown(10, 10));
+    }
 }

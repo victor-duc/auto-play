@@ -119,6 +119,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IRunLogStore>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<IProfileArchive>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<ICaptureInbox>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<IRunHistory>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddTransient(_ => new Random());
 
         // Application (use cases)

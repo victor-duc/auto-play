@@ -19,8 +19,16 @@ public sealed partial class MainViewModel(
     AppPaths paths,
     RunScheduler? scheduler = null,
     ISettingsFlow? settingsFlow = null,
-    CaptureInboxService? captureInbox = null) : ObservableObject
+    CaptureInboxService? captureInbox = null,
+    SequenceExecutionService? executionService = null,
+    Func<DateTimeOffset>? now = null) : ObservableObject
 {
+    /// <summary>Size of the screen thumbnails, in pixels.</summary>
+    private const int ThumbnailWidth = 96;
+    private const int ThumbnailHeight = 54;
+
+    private readonly Func<DateTimeOffset> _now = now ?? (() => DateTimeOffset.Now);
+
     /// <summary>Quick captures of the selected profile waiting to be annotated, oldest first.</summary>
     public ObservableCollection<PendingCapture> PendingCaptures { get; } = [];
 
@@ -122,7 +130,11 @@ public sealed partial class MainViewModel(
     {
         if (scheduler is not null)
         {
-            scheduler.Notification += (_, message) => StatusMessage = message;
+            scheduler.Notification += (_, message) =>
+            {
+                StatusMessage = message;
+                ReloadSequences(SelectedSequence?.Id); // Shows the outcome of a scheduled run.
+            };
         }
     }
 
@@ -134,9 +146,9 @@ public sealed partial class MainViewModel(
 
     public ObservableCollection<Profile> Profiles { get; } = [];
 
-    public ObservableCollection<Screen> Screens { get; } = [];
+    public ObservableCollection<ScreenItem> Screens { get; } = [];
 
-    public ObservableCollection<Sequence> Sequences { get; } = [];
+    public ObservableCollection<SequenceItem> Sequences { get; } = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(ExportProfileCommand), nameof(RecordScreenCommand), nameof(NewSequenceCommand))]
@@ -144,11 +156,11 @@ public sealed partial class MainViewModel(
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EditScreenCommand), nameof(RecaptureScreenCommand), nameof(DeleteScreenCommand))]
-    public partial Screen? SelectedScreen { get; set; }
+    public partial ScreenItem? SelectedScreen { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EditSequenceCommand), nameof(DuplicateSequenceCommand), nameof(DeleteSequenceCommand), nameof(RunSequenceCommand))]
-    public partial Sequence? SelectedSequence { get; set; }
+    public partial SequenceItem? SelectedSequence { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateProfileCommand))]
@@ -184,9 +196,10 @@ public sealed partial class MainViewModel(
             return;
         }
 
+        var lastRuns = executionService?.GetLastRuns(SelectedProfile.Id) ?? new Dictionary<Guid, AutoPlay.Application.Execution.RunSummary>();
         foreach (var sequence in sequenceService.GetSequences(SelectedProfile.Id))
         {
-            Sequences.Add(sequence);
+            Sequences.Add(new SequenceItem(sequence, lastRuns.GetValueOrDefault(sequence.Id), _now()));
         }
 
         SelectedSequence = Sequences.FirstOrDefault(s => s.Id == sequenceToSelect);
@@ -216,7 +229,7 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
     private void EditSequence()
     {
-        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        if (SelectedProfile is not { } profile || SelectedSequence?.Sequence is not { } sequence)
         {
             return;
         }
@@ -231,19 +244,22 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
     private async Task RunSequenceAsync()
     {
-        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        if (SelectedProfile is not { } profile || SelectedSequence?.Sequence is not { } sequence)
         {
             return;
         }
 
         await sequenceExecution.RunAsync(profile, sequence);
-        StatusMessage = $"Sequence '{sequence.Name}' finished.";
+        ReloadSequences(sequence.Id);
+        StatusMessage = SelectedSequence?.LastRun is null
+            ? $"Sequence '{sequence.Name}' not run."
+            : $"Sequence '{sequence.Name}': {SelectedSequence.LastRunText}.";
     }
 
     [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
     private void DuplicateSequence()
     {
-        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        if (SelectedProfile is not { } profile || SelectedSequence?.Sequence is not { } sequence)
         {
             return;
         }
@@ -262,7 +278,7 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedSequence))]
     private void DeleteSequence()
     {
-        if (SelectedProfile is not { } profile || SelectedSequence is not { } sequence)
+        if (SelectedProfile is not { } profile || SelectedSequence?.Sequence is not { } sequence)
         {
             return;
         }
@@ -292,7 +308,7 @@ public sealed partial class MainViewModel(
 
         foreach (var screen in screenService.GetScreens(SelectedProfile.Id))
         {
-            Screens.Add(screen);
+            Screens.Add(new ScreenItem(screen, screenService.GetThumbnail(SelectedProfile.Id, screen.Id, ThumbnailWidth, ThumbnailHeight)));
         }
 
         SelectedScreen = Screens.FirstOrDefault(s => s.Id == screenToSelect);
@@ -323,7 +339,7 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
     private void EditScreen()
     {
-        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        if (SelectedProfile is not { } profile || SelectedScreen?.Screen is not { } screen)
         {
             return;
         }
@@ -338,7 +354,7 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
     private async Task RecaptureScreenAsync()
     {
-        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        if (SelectedProfile is not { } profile || SelectedScreen?.Screen is not { } screen)
         {
             return;
         }
@@ -353,7 +369,7 @@ public sealed partial class MainViewModel(
     [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
     private void DeleteScreen()
     {
-        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        if (SelectedProfile is not { } profile || SelectedScreen?.Screen is not { } screen)
         {
             return;
         }

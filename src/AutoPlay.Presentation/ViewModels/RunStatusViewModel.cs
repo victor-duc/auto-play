@@ -194,6 +194,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
 
     private void HandleResult(RunResult result)
     {
+        _executionService.RecordRun(_profile.Id, _sequence.Id, result, DateTimeOffset.Now);
         _position = result.Position;
         _canResume = result.Status is RunStatus.Cancelled or RunStatus.UserTookOver or RunStatus.VerificationFailed;
         Message = result.Message;

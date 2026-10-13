@@ -132,7 +132,7 @@ public sealed class FileProfileStoreTests : IDisposable
     }
 
     [Fact]
-    public void Export_writes_the_profile_without_its_logs_and_pending_captures()
+    public void Export_writes_the_profile_without_its_logs_history_and_pending_captures()
     {
         var profile = new Profile { Name = "Game" };
         _store.SaveProfile(profile);
@@ -143,6 +143,7 @@ public sealed class FileProfileStoreTests : IDisposable
         _store.SaveSequence(profile.Id, sequence);
         _store.SaveLogImage(profile.Id, "failure", TestImages.Solid(2, 2));
         _store.SavePendingCapture(profile.Id, new PendingCapture(Guid.NewGuid(), DateTimeOffset.UtcNow), TestImages.Solid(2, 2));
+        _store.SaveLastRun(profile.Id, new AutoPlay.Application.Execution.RunSummary { SequenceId = sequence.Id });
         var destination = Path.Combine(_root, "export.zip");
 
         _store.ExportProfile(profile.Id, destination);

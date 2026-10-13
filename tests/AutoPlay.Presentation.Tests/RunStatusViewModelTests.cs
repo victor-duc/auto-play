@@ -41,7 +41,7 @@ public class RunStatusViewModelTests
 
     private RunStatusViewModel NewViewModel(Sequence sequence, double score) => new(
         new SequenceRunner(new FakeScreenCapture(), _input, new FakeTemplateMatcher(new MatchResult(new PixelRect(50, 25, 100, 50), score)), new FakePowerManager(), new FakeClock(), new Random(1)),
-        new SequenceExecutionService(_repository, _repository, _repository),
+        new SequenceExecutionService(_repository, _repository, _repository, runHistory: _repository),
         _profile,
         sequence,
         _assets,
@@ -57,6 +57,7 @@ public class RunStatusViewModelTests
 
         Assert.Equal(RunState.Completed, viewModel.State);
         Assert.Equal("Completed", viewModel.StateText);
+        Assert.Equal(RunStatus.Completed, Assert.Single(_repository.LastRuns[_profile.Id]).Status);
         Assert.Equal(2, _input.Clicks.Count);
         Assert.False(viewModel.ResumeCommand.CanExecute(null));
         Assert.True(viewModel.CloseCommand.CanExecute(null));

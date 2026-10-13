@@ -28,7 +28,8 @@ public class MainViewModelTests
             _dialogs,
             _shell,
             new AppPaths("root"),
-            captureInbox: new CaptureInboxService(_repository, new FakeScreenCapture(), new FakeClock()));
+            captureInbox: new CaptureInboxService(_repository, new FakeScreenCapture(), new FakeClock()),
+            executionService: new SequenceExecutionService(_repository, _repository, _repository, runHistory: _repository));
     }
 
     [Fact]
@@ -243,5 +244,28 @@ public class MainViewModelTests
 
         Assert.Empty(_viewModel.PendingCaptures);
         Assert.False(_viewModel.HasPendingCaptures);
+    }
+
+    [Fact]
+    public void Lists_show_screen_thumbnails_and_the_last_run_of_each_sequence()
+    {
+        var profile = new Profile { Name = "Game" };
+        var screen = new Screen { Name = "Map" };
+        var sequence = new Sequence { Name = "Raids" };
+        _repository.Profiles.Add(profile);
+        _repository.Screens[profile.Id] = [screen];
+        _repository.Captures[screen.Id] = TestImages.Solid(960, 540);
+        _repository.Sequences[profile.Id] = [sequence];
+        _repository.SaveLastRun(profile.Id, new AutoPlay.Application.Execution.RunSummary
+        {
+            SequenceId = sequence.Id,
+            EndedAt = DateTimeOffset.Now,
+            Status = AutoPlay.Application.Execution.RunStatus.Completed,
+        });
+
+        _viewModel.Load();
+
+        Assert.Equal(96, _viewModel.Screens.Single().Thumbnail!.Width);
+        Assert.StartsWith("✔ Completed today", _viewModel.Sequences.Single().LastRunText);
     }
 }

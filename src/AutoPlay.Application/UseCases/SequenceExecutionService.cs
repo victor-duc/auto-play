@@ -16,9 +16,58 @@ public sealed class SequenceExecutionService(
     IScreenRepository screens,
     ISequenceRepository sequences,
     IRunLogStore runLogs,
-    ILogger<SequenceExecutionService>? logger = null)
+    ILogger<SequenceExecutionService>? logger = null,
+    IRunHistory? runHistory = null)
 {
     private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
+    /// <summary>
+    /// Remembers how the run of a sequence ended, for the main window. The history is informative: a storage error
+    /// is logged, not reported.
+    /// </summary>
+    public void RecordRun(Guid profileId, Guid sequenceId, RunResult result, DateTimeOffset endedAt)
+    {
+        if (runHistory is null)
+        {
+            return;
+        }
+
+        try
+        {
+            runHistory.SaveLastRun(profileId, new RunSummary
+            {
+                SequenceId = sequenceId,
+                EndedAt = endedAt,
+                Status = result.Status,
+                Message = result.Message,
+            });
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+        }
+    }
+
+    /// <summary>The last run of each sequence of the profile, by sequence id (empty if the history cannot be read).</summary>
+    public IReadOnlyDictionary<Guid, RunSummary> GetLastRuns(Guid profileId)
+    {
+        if (runHistory is null)
+        {
+            return new Dictionary<Guid, RunSummary>();
+        }
+
+        try
+        {
+            return runHistory.LoadLastRuns(profileId)
+                .GroupBy(r => r.SequenceId)
+                .ToDictionary(g => g.Key, g => g.MaxBy(r => r.EndedAt)!);
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+            return new Dictionary<Guid, RunSummary>();
+        }
+    }
 
     /// <summary>
     /// Checks that the sequence can run, expands the sequences it runs, and loads the screens it clicks on

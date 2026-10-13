@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
+using AutoPlay.Application.Execution;
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
@@ -13,13 +14,14 @@ namespace AutoPlay.Adapters.Persistence;
 /// root/&lt;profile-id&gt;/profile.json
 ///                  /screens/&lt;screen-id&gt;/screen.json, capture.png, locations/&lt;location-id&gt;.png
 ///                  /sequences/&lt;sequence-id&gt;.json
+///                  /runs.json (last run of each sequence)
 ///                  /inbox/&lt;utc-time&gt;_&lt;capture-id&gt;.png
 ///                  /logs/*.png
 /// </code>
 /// </summary>
 /// <remarks>Input/output, JSON and image errors are reported as <see cref="PersistenceException"/>.</remarks>
 public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
-    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, IProfileArchive, ICaptureInbox
+    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, IProfileArchive, ICaptureInbox, IRunHistory
 {
     private const string ProfileFileName = "profile.json";
     private const string ScreenFileName = "screen.json";
@@ -65,6 +67,12 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
 
     public void ExportProfile(Guid profileId, string destinationPath) =>
         Guard(() => ExportProfileCore(profileId, destinationPath), "The profile could not be exported");
+
+    public IReadOnlyList<RunSummary> LoadLastRuns(Guid profileId) =>
+        Guard(() => LoadRunHistory(profileId).LastRuns, "The run history could not be loaded");
+
+    public void SaveLastRun(Guid profileId, RunSummary run) =>
+        Guard(() => SaveLastRunCore(profileId, run), "The run history could not be saved");
 
     public IReadOnlyList<PendingCapture> LoadPendingCaptures(Guid profileId) =>
         Guard(() => LoadPendingCapturesCore(profileId), "The pending captures could not be loaded");
@@ -200,8 +208,24 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
             return true;
         }, message);
 
-    /// <summary>Folders of a profile that are not exported (diagnostics and work in progress).</summary>
-    private static readonly string[] NotExportedFolders = ["logs", InboxFolderName];
+    /// <summary>Folders and files of a profile that are not exported (diagnostics, history and work in progress).</summary>
+    private static readonly string[] NotExportedFolders = ["logs", InboxFolderName, RunHistoryFileName];
+
+    private const string RunHistoryFileName = "runs.json";
+
+    private RunHistoryFile LoadRunHistory(Guid profileId)
+    {
+        var path = Path.Combine(ProfileDirectory(profileId), RunHistoryFileName);
+        return File.Exists(path) ? ReadJson<RunHistoryFile>(path) : new RunHistoryFile();
+    }
+
+    private void SaveLastRunCore(Guid profileId, RunSummary run)
+    {
+        var history = LoadRunHistory(profileId);
+        history.LastRuns.RemoveAll(r => r.SequenceId == run.SequenceId);
+        history.LastRuns.Add(run);
+        WriteJson(Path.Combine(ProfileDirectory(profileId), RunHistoryFileName), history);
+    }
 
     private const string InboxFolderName = "inbox";
 

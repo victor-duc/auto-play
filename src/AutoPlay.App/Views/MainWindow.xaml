@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
-        Title="AutoPlay" Width="900" Height="560" MinWidth="640" MinHeight="400"
+        Title="AutoPlay" Width="1000" Height="680" MinWidth="720" MinHeight="460"
         WindowStartupLocation="CenterScreen">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -44,11 +44,14 @@
                 </DockPanel>
                 <Button DockPanel.Dock="Bottom" Margin="0,8,0,0" HorizontalAlignment="Left"
                         Content="Delete profile" Command="{Binding DeleteProfileCommand}" />
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource EmptyStateText}"
+                           Visibility="{Binding Profiles.Count, Converter={StaticResource EmptyToVisible}}"
+                           Text="Welcome! Create your first profile: type the name of the game or application below (for example Hero Wars) and click Add. A profile groups its screens and sequences." />
                 <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" />
             </DockPanel>
 
             <!-- Screens and sequences of the selected profile -->
-            <Grid Grid.Column="2">
+            <Grid Grid.Column="2" IsEnabled="{Binding SelectedProfile, Converter={StaticResource NotNullToBoolean}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="16" />
@@ -88,41 +91,78 @@
                             </ItemsControl>
                         </StackPanel>
                     </Border>
+                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource EmptyStateText}"
+                               Visibility="{Binding Screens.Count, Converter={StaticResource EmptyToVisible}}"
+                               Text="No screen yet. Display the game, then click Record screen: frame the game area, capture it and draw the buttons to click. While playing, you can also press the quick capture shortcut (see File > Settings) and annotate the captures here later." />
                     <ListBox ItemsSource="{Binding Screens}" SelectedItem="{Binding SelectedScreen}">
                         <ListBox.InputBindings>
                             <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditScreenCommand}" />
                         </ListBox.InputBindings>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock>
-                                    <Run Text="{Binding Name, Mode=OneWay}" />
-                                    <Run Foreground="{StaticResource HintBrush}" Text="{Binding Locations.Count, Mode=OneWay, StringFormat='({0} locations)'}" />
-                                </TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <Border Width="96" Height="54" Margin="0,0,10,0" Background="{StaticResource ThumbnailBrush}">
+                                        <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" />
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding LocationsText}" Foreground="{StaticResource HintBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
 
                 <DockPanel Grid.Row="2">
-                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Text="Sequences" />
+                    <DockPanel DockPanel.Dock="Top">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6" Padding="20,6"
+                                Content="▶  Run" Command="{Binding RunSequenceCommand}"
+                                ToolTip="Frame the target area and run the selected sequence. F12 (or Esc) stops it; moving the mouse pauses it." />
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Sequences" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource EmptyStateText}"
+                               Visibility="{Binding Sequences.Count, Converter={StaticResource EmptyToVisible}}"
+                               Text="No sequence yet. Once your screens are recorded, click New sequence to chain their locations, then select it and click Run." />
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="New sequence" Command="{Binding NewSequenceCommand}" />
                         <Button Content="Edit" Command="{Binding EditSequenceCommand}" ToolTip="Edit the selected sequence (double-click)." />
                         <Button Content="Duplicate" Command="{Binding DuplicateSequenceCommand}" />
                         <Button Content="Delete" Command="{Binding DeleteSequenceCommand}" />
-                        <Button Content="Run" Command="{Binding RunSequenceCommand}" FontWeight="SemiBold"
-                                ToolTip="Frame the target area and run the selected sequence. F12 stops it; moving the mouse pauses it." />
                     </StackPanel>
-                    <ListBox ItemsSource="{Binding Sequences}" SelectedItem="{Binding SelectedSequence}">
+                    <ListBox ItemsSource="{Binding Sequences}" SelectedItem="{Binding SelectedSequence}" HorizontalContentAlignment="Stretch">
                         <ListBox.InputBindings>
                             <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditSequenceCommand}" />
                         </ListBox.InputBindings>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock>
-                                    <Run Text="{Binding Name, Mode=OneWay}" />
-                                    <Run Foreground="{StaticResource HintBrush}" Text="{Binding Steps.Count, Mode=OneWay, StringFormat='({0} steps)'}" />
-                                </TextBlock>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Foreground="{StaticResource HintBrush}">
+                                            <Run Text="{Binding Details, Mode=OneWay}" />
+                                            <Run Text="{Binding ScheduleText, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <Border x:Name="LastRunBadge" Grid.Column="1" Margin="12,0,0,0" Padding="8,2" CornerRadius="4"
+                                            VerticalAlignment="Center" ToolTip="{Binding LastRunDetails}">
+                                        <TextBlock x:Name="LastRunLabel" Text="{Binding LastRunText}" Foreground="{StaticResource HintBrush}" />
+                                    </Border>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding LastRunSucceeded}" Value="True">
+                                        <Setter TargetName="LastRunBadge" Property="Background" Value="{StaticResource SuccessTintBrush}" />
+                                        <Setter TargetName="LastRunLabel" Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding LastRunFailed}" Value="True">
+                                        <Setter TargetName="LastRunBadge" Property="Background" Value="{StaticResource ErrorTintBrush}" />
+                                        <Setter TargetName="LastRunLabel" Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

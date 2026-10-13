@@ -325,4 +325,36 @@ public sealed class FileFormatTests : IDisposable
 
         Assert.Throws<PersistenceException>(() => _store.LoadProfiles());
     }
+
+    [Fact]
+    public void Run_history_matches_the_schema_and_keeps_the_last_run_of_each_sequence()
+    {
+        var sequenceId = Guid.NewGuid();
+        var endedAt = new DateTimeOffset(2026, 5, 6, 7, 8, 9, TimeSpan.FromHours(2));
+        _store.SaveLastRun(_profile.Id, new AutoPlay.Application.Execution.RunSummary
+        {
+            SequenceId = sequenceId,
+            EndedAt = endedAt.AddHours(-1),
+            Status = AutoPlay.Application.Execution.RunStatus.Completed,
+        });
+        _store.SaveLastRun(_profile.Id, new AutoPlay.Application.Execution.RunSummary
+        {
+            SequenceId = sequenceId,
+            EndedAt = endedAt,
+            Status = AutoPlay.Application.Execution.RunStatus.VerificationFailed,
+            Message = "'Map / Attack' was not found.",
+        });
+
+        Assert.Empty(JsonSchemas.Validate(JsonSchemas.RunHistory, File.ReadAllText(Path.Combine(ProfileDirectory, "runs.json"))));
+        var run = Assert.Single(_store.LoadLastRuns(_profile.Id));
+        Assert.Equal(endedAt, run.EndedAt);
+        Assert.Equal(AutoPlay.Application.Execution.RunStatus.VerificationFailed, run.Status);
+        Assert.Equal("'Map / Attack' was not found.", run.Message);
+    }
+
+    [Fact]
+    public void Missing_run_history_is_empty()
+    {
+        Assert.Empty(_store.LoadLastRuns(Guid.NewGuid()));
+    }
 }

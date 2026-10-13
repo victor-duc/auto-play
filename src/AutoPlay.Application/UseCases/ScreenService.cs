@@ -25,6 +25,20 @@ public sealed class ScreenService(
 
     public RawImage GetCapture(Guid profileId, Guid screenId) => screens.LoadScreenCapture(profileId, screenId);
 
+    /// <summary>A reduced copy of the screen capture for lists, or null if it cannot be read.</summary>
+    public RawImage? GetThumbnail(Guid profileId, Guid screenId, int maxWidth, int maxHeight)
+    {
+        try
+        {
+            return screens.LoadScreenCapture(profileId, screenId).ScaleDown(maxWidth, maxHeight);
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+            return null;
+        }
+    }
+
     public RawImage GetTemplate(Guid profileId, Guid screenId, Guid locationId) =>
         screens.LoadLocationTemplate(profileId, screenId, locationId);
 

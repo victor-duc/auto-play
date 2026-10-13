@@ -1,3 +1,4 @@
+using AutoPlay.Application.Execution;
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
@@ -5,7 +6,7 @@ using AutoPlay.Domain.Model;
 namespace AutoPlay.TestDoubles;
 
 /// <summary>In-memory implementation of the persistence ports.</summary>
-public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, ICaptureInbox
+public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, ICaptureInbox, IRunHistory
 {
     public List<Profile> Profiles { get; } = [];
 
@@ -20,6 +21,19 @@ public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, 
     public List<(string Name, RawImage Image)> LogImages { get; } = [];
 
     public Dictionary<Guid, List<(PendingCapture Capture, RawImage Image)>> Inbox { get; } = [];
+
+    public Dictionary<Guid, List<RunSummary>> LastRuns { get; } = [];
+
+    public IReadOnlyList<RunSummary> LoadLastRuns(Guid profileId) =>
+        Check(LastRuns.TryGetValue(profileId, out var runs) ? runs.ToList() : []);
+
+    public void SaveLastRun(Guid profileId, RunSummary run)
+    {
+        Check(0);
+        var runs = LastRuns.TryGetValue(profileId, out var list) ? list : LastRuns[profileId] = [];
+        runs.RemoveAll(r => r.SequenceId == run.SequenceId);
+        runs.Add(run);
+    }
 
     /// <summary>When set, every operation throws this error (simulates a storage failure).</summary>
     public PersistenceException? Failure { get; set; }
@@ -59,7 +73,8 @@ public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, 
         ScreensOf(profileId).RemoveAll(s => s.Id == screenId);
     }
 
-    public RawImage LoadScreenCapture(Guid profileId, Guid screenId) => Check(Captures[screenId]);
+    public RawImage LoadScreenCapture(Guid profileId, Guid screenId) =>
+        Check(Captures.TryGetValue(screenId, out var capture) ? capture : throw new PersistenceException("Missing capture."));
 
     public RawImage LoadLocationTemplate(Guid profileId, Guid screenId, Guid locationId) =>
         Check(Templates.TryGetValue((screenId, locationId), out var template)
