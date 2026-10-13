@@ -14,8 +14,16 @@ public sealed partial class MainViewModel(
     ScreenRecordingFlow screenRecording,
     SequenceEditingFlow sequenceEditing,
     SequenceExecutionFlow sequenceExecution,
-    IUserDialogs dialogs) : ObservableObject
+    IUserDialogs dialogs,
+    IShellLauncher shell,
+    AppPaths paths) : ObservableObject
 {
+    [RelayCommand]
+    private void OpenLogsFolder() => shell.Open(paths.Logs);
+
+    [RelayCommand]
+    private void OpenDataFolder() => shell.Open(paths.Profiles);
+
     public ObservableCollection<Profile> Profiles { get; } = [];
 
     public ObservableCollection<Screen> Screens { get; } = [];

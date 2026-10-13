@@ -1,12 +1,16 @@
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
 /// <summary>Use cases on profiles.</summary>
-public sealed class ProfileService(IProfileRepository profiles)
+public sealed class ProfileService(IProfileRepository profiles, ILogger<ProfileService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     public IReadOnlyList<Profile> GetProfiles() => profiles.LoadProfiles();
 
     /// <summary>Creates a profile; the name is required and must be unique (ignoring case and surrounding spaces).</summary>
@@ -31,6 +35,7 @@ public sealed class ProfileService(IProfileRepository profiles)
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure<Profile>(ex.Message);
         }
     }

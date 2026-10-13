@@ -14,4 +14,6 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         Loaded += (_, _) => _viewModel.Load();
     }
+
+    private void OnExitClick(object sender, RoutedEventArgs e) => Close();
 }

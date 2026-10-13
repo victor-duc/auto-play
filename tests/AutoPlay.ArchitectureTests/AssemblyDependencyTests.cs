@@ -21,11 +21,13 @@ public class AssemblyDependencyTests
     }
 
     [Fact]
-    public void Application_uses_only_the_domain_and_the_base_library()
+    public void Application_uses_only_the_domain_the_logging_abstractions_and_the_base_library()
     {
         Assert.All(
             ReferencedNames(Application),
-            name => Assert.True(IsBaseLibrary(name) || name == "AutoPlay.Domain", $"The application uses {name}."));
+            name => Assert.True(
+                IsBaseLibrary(name) || name is "AutoPlay.Domain" or "Microsoft.Extensions.Logging.Abstractions",
+                $"The application uses {name}."));
     }
 
     [Theory]

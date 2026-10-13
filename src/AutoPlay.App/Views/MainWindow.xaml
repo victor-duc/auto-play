@@ -9,6 +9,14 @@
         Title="AutoPlay" Width="900" Height="560" MinWidth="640" MinHeight="400"
         WindowStartupLocation="CenterScreen">
     <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="Open _data folder" Command="{Binding OpenDataFolderCommand}" />
+                <MenuItem Header="Open _logs folder" Command="{Binding OpenLogsFolderCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExitClick" />
+            </MenuItem>
+        </Menu>
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem Content="{Binding StatusMessage}" />
         </StatusBar>

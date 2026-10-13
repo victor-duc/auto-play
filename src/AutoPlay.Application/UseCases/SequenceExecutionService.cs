@@ -3,6 +3,8 @@ using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Sequencing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
@@ -10,8 +12,10 @@ namespace AutoPlay.Application.UseCases;
 /// Use cases around a run: prepare what the <see cref="SequenceRunner"/> needs, and keep a diagnostic
 /// capture when a verification fails.
 /// </summary>
-public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogStore runLogs)
+public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogStore runLogs, ILogger<SequenceExecutionService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     /// <summary>
     /// Checks that the sequence can run and loads the screens it uses with their template images.
     /// </summary>
@@ -40,6 +44,7 @@ public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogS
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure<IReadOnlyDictionary<Guid, ScreenAssets>>(
                 $"The images of the sequence could not be loaded: {ex.Message}");
         }

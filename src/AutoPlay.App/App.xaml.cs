@@ -14,6 +14,8 @@ using AutoPlay.Adapters.Windows.Input;
 using AutoPlay.Adapters.Windows.Power;
 using AutoPlay.Adapters.Windows.Time;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace AutoPlay.App;
 
@@ -26,9 +28,7 @@ public partial class App : System.Windows.Application
     private ServiceProvider? _services;
     private Mutex? _singleInstanceMutex;
 
-    /// <summary>Default root folder of the profiles: %LOCALAPPDATA%\AutoPlay\Profiles.</summary>
-    public static string DefaultProfilesPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AutoPlay", "Profiles");
+    private Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -44,9 +44,21 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        var paths = AppPaths.Default;
+        _services = ConfigureServices(paths).BuildServiceProvider();
+        _logger = _services.GetRequiredService<ILoggerFactory>().CreateLogger("AutoPlay");
+        var version = typeof(App).Assembly.GetName().Version?.ToString() ?? "?";
+        AppLog.Started(_logger, version, paths.Root);
 
-        _services = ConfigureServices().BuildServiceProvider();
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            AppLog.Crashed(_logger, args.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            AppLog.Unexpected(_logger, args.Exception);
+            args.SetObserved();
+        };
+
         var mainWindow = _services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
@@ -54,6 +66,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        AppLog.Stopped(_logger);
         _services?.Dispose();
         if (_singleInstanceMutex is not null)
         {
@@ -64,9 +77,25 @@ public partial class App : System.Windows.Application
         base.OnExit(e);
     }
 
-    private static ServiceCollection ConfigureServices()
+    private static ServiceCollection ConfigureServices(AppPaths paths)
     {
         var services = new ServiceCollection();
+
+        // Logging: rolling files in %LOCALAPPDATA%\AutoPlay\Logs, one per day, kept 14 days.
+        var fileLogger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.File(
+                Path.Combine(paths.Logs, "autoplay-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 14,
+                fileSizeLimitBytes: 10 * 1024 * 1024,
+                rollOnFileSizeLimit: true,
+                formatProvider: System.Globalization.CultureInfo.InvariantCulture,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+        services.AddLogging(builder => builder.AddSerilog(fileLogger, dispose: true));
+        services.AddSingleton(paths);
+        services.AddSingleton<IShellLauncher, ShellLauncher>();
 
         // Driven adapters (implement the application ports)
         services.AddSingleton<IScreenCapture, GdiScreenCapture>();
@@ -74,7 +103,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IPowerManager, WindowsPowerManager>();
         services.AddSingleton<ITemplateMatcher, OpenCvTemplateMatcher>();
         services.AddSingleton<IClock>(SystemClock.Instance);
-        services.AddSingleton(_ => new FileProfileStore(DefaultProfilesPath, new OpenCvImageCodec()));
+        services.AddSingleton(_ => new FileProfileStore(paths.Profiles, new OpenCvImageCodec()));
         services.AddSingleton<IProfileRepository>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<IScreenRepository>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<ISequenceRepository>(sp => sp.GetRequiredService<FileProfileStore>());
@@ -101,6 +130,7 @@ public partial class App : System.Windows.Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        AppLog.Unexpected(_logger, e.Exception);
         MessageBox.Show(MainWindow, e.Exception.Message, "AutoPlay — Unexpected error", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }

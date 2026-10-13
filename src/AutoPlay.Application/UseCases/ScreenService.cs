@@ -4,6 +4,8 @@ using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Recording;
 using AutoPlay.Domain.Sequencing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
@@ -12,8 +14,11 @@ public sealed class ScreenService(
     IScreenRepository screens,
     ISequenceRepository sequences,
     IProfileRepository profiles,
-    IScreenCapture screenCapture)
+    IScreenCapture screenCapture,
+    ILogger<ScreenService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     public IReadOnlyList<Screen> GetScreens(Guid profileId) => screens.LoadScreens(profileId);
 
     public RawImage GetCapture(Guid profileId, Guid screenId) => screens.LoadScreenCapture(profileId, screenId);
@@ -48,6 +53,7 @@ public sealed class ScreenService(
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure(ex.Message);
         }
     }

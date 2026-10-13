@@ -2,6 +2,8 @@ using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.Execution;
 
@@ -15,8 +17,11 @@ public sealed class SequenceRunner(
     ITemplateMatcher templateMatcher,
     IPowerManager powerManager,
     IClock clock,
-    Random random)
+    Random random,
+    ILogger<SequenceRunner>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     /// <param name="profile">The profile providing the default settings.</param>
     /// <param name="screens">The screens referenced by the sequence, by screen ID.</param>
     /// <param name="sequence">The sequence to execute.</param>
@@ -38,7 +43,30 @@ public sealed class SequenceRunner(
         }
 
         using var sleepPrevention = powerManager.PreventSleep();
+        RunLog.Started(_logger, sequence.Name, start.Iteration + 1, start.StepIndex + 1, targetRegion);
 
+        var result = await RunIterationsAsync(profile, screens, sequence, targetRegion, start, progress, cancellationToken);
+        if (result.Status is RunStatus.Completed or RunStatus.Cancelled or RunStatus.UserTookOver)
+        {
+            RunLog.Finished(_logger, sequence.Name, result.Status, result.Position.Iteration + 1, result.Position.StepIndex + 1, result.Message);
+        }
+        else
+        {
+            RunLog.Failed(_logger, sequence.Name, result.Status, result.Position.Iteration + 1, result.Position.StepIndex + 1, result.Message);
+        }
+
+        return result;
+    }
+
+    private async Task<RunResult> RunIterationsAsync(
+        Profile profile,
+        IReadOnlyDictionary<Guid, ScreenAssets> screens,
+        Sequence sequence,
+        PixelRect targetRegion,
+        RunPosition start,
+        IProgress<RunProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         var position = start;
         PixelPoint? lastClick = null;
         try
@@ -128,6 +156,7 @@ public sealed class SequenceRunner(
 
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new RunProgress(position, sequence.Steps.Count, score));
+        RunLog.Click(_logger, position.Iteration + 1, position.StepIndex + 1, assets.Screen.Name, location.Name, score, clickPoint.X, clickPoint.Y);
         inputDriver.Click(clickPoint);
         return (clickPoint, null);
     }
@@ -174,4 +203,20 @@ public sealed class SequenceRunner(
 
     /// <param name="Match">The accepted match, in screen coordinates, or null if none was found.</param>
     private sealed record Verification(MatchResult? Match, double BestScore, RawImage LastCapture, PixelRect ExpectedBoundsInCapture);
+}
+
+/// <summary>Log messages of the sequence engine (source-generated for performance).</summary>
+internal static partial class RunLog
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Run of '{Sequence}' started at iteration {Iteration}, step {Step}, in region {Region}")]
+    public static partial void Started(ILogger logger, string sequence, int iteration, int step, PixelRect region);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Iteration {Iteration}, step {Step}: '{Screen} / {Location}' (score {Score}) clicked at ({X}, {Y})")]
+    public static partial void Click(ILogger logger, int iteration, int step, string screen, string location, double? score, int x, int y);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Run of '{Sequence}' ended: {Status} at iteration {Iteration}, step {Step}. {Message}")]
+    public static partial void Finished(ILogger logger, string sequence, RunStatus status, int iteration, int step, string? message);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Run of '{Sequence}' failed: {Status} at iteration {Iteration}, step {Step}. {Message}")]
+    public static partial void Failed(ILogger logger, string sequence, RunStatus status, int iteration, int step, string? message);
 }

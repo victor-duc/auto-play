@@ -7,7 +7,7 @@ namespace AutoPlay.ArchitectureTests;
 /// Windows-only projects that cannot be loaded on every OS:
 /// <list type="bullet">
 /// <item>the Domain depends on nothing;</item>
-/// <item>the Application depends only on the Domain and uses no package;</item>
+/// <item>the Application depends only on the Domain and uses no package except the logging abstractions;</item>
 /// <item>each adapter depends on the Application, never on another adapter or on the UI;</item>
 /// <item>only the App (composition root) references the adapters.</item>
 /// </list>
@@ -27,10 +27,10 @@ public class ProjectDependencyTests
     }
 
     [Fact]
-    public void Application_depends_only_on_the_domain()
+    public void Application_depends_only_on_the_domain_and_the_logging_abstractions()
     {
         Assert.Equal(["AutoPlay.Domain"], ProjectReferences("AutoPlay.Application"));
-        Assert.Empty(PackageReferences("AutoPlay.Application"));
+        Assert.Equal(["Microsoft.Extensions.Logging.Abstractions"], PackageReferences("AutoPlay.Application"));
     }
 
     [Theory]

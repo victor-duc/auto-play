@@ -204,6 +204,43 @@ public class SequenceRunnerTests
         Assert.Equal(0, _power.ActiveRequests);
     }
 
+    [Fact]
+    public async Task Runs_and_clicks_are_logged()
+    {
+        var logger = new ListLogger<SequenceRunner>();
+        var runner = new SequenceRunner(_capture, _input, new FakeTemplateMatcher(MatchAtExpectedPosition()), _power, _clock, new Random(1), logger);
+        var screens = new Dictionary<Guid, ScreenAssets>
+        {
+            [_screen.Id] = new(_screen, new Dictionary<Guid, RawImage> { [_location.Id] = TestImages.Solid(100, 50) }),
+        };
+
+        await runner.RunAsync(_profile, screens, Sequence(1, Step()), Region);
+
+        Assert.Collection(
+            logger.Entries,
+            e => Assert.Contains("Run of 'Test' started", e.Message),
+            e => Assert.Contains("'Main / Button' (score 0.95) clicked at (550, 325)", e.Message),
+            e => Assert.Contains("Run of 'Test' ended: Completed", e.Message));
+    }
+
+    [Fact]
+    public async Task Failures_are_logged_as_warnings()
+    {
+        _profile.Defaults.VerificationTimeoutMs = 0;
+        var logger = new ListLogger<SequenceRunner>();
+        var runner = new SequenceRunner(_capture, _input, new FakeTemplateMatcher(MatchAtExpectedPosition(0.1)), _power, _clock, new Random(1), logger);
+        var screens = new Dictionary<Guid, ScreenAssets>
+        {
+            [_screen.Id] = new(_screen, new Dictionary<Guid, RawImage> { [_location.Id] = TestImages.Solid(100, 50) }),
+        };
+
+        await runner.RunAsync(_profile, screens, Sequence(1, Step()), Region);
+
+        var last = logger.Entries[^1];
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, last.Level);
+        Assert.Contains("VerificationFailed", last.Message);
+    }
+
     private SequenceStep Step(bool verify = true) =>
         new() { ScreenId = _screen.Id, LocationId = _location.Id, Verify = verify };
 

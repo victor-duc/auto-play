@@ -1,12 +1,16 @@
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Sequencing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
 /// <summary>Use cases on sequences: save, duplicate, delete and read them.</summary>
-public sealed class SequenceService(ISequenceRepository sequences, IScreenRepository screens)
+public sealed class SequenceService(ISequenceRepository sequences, IScreenRepository screens, ILogger<SequenceService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     public IReadOnlyList<Sequence> GetSequences(Guid profileId) => sequences.LoadSequences(profileId);
 
     /// <summary>Validates and saves a new or edited sequence; its name is trimmed.</summary>
@@ -28,6 +32,7 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure(ex.Message);
         }
     }
@@ -70,6 +75,7 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure<Sequence>(ex.Message);
         }
     }
