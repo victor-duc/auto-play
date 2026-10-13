@@ -11,4 +11,7 @@ public sealed class Sequence
     public int RepeatCount { get; set; } = 1;
 
     public List<SequenceStep> Steps { get; set; } = [];
+
+    /// <summary>Automatic start, or null if the sequence is only started by hand.</summary>
+    public SequenceSchedule? Schedule { get; set; }
 }

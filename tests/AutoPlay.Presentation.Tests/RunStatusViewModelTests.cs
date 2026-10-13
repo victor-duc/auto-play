@@ -41,7 +41,7 @@ public class RunStatusViewModelTests
 
     private RunStatusViewModel NewViewModel(Sequence sequence, double score) => new(
         new SequenceRunner(new FakeScreenCapture(), _input, new FakeTemplateMatcher(new MatchResult(new PixelRect(50, 25, 100, 50), score)), new FakePowerManager(), new FakeClock(), new Random(1)),
-        new SequenceExecutionService(_repository, _repository),
+        new SequenceExecutionService(_repository, _repository, _repository),
         _profile,
         sequence,
         _assets,

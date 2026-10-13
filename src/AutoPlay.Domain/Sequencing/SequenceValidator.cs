@@ -48,6 +48,9 @@ public static class SequenceValidator
                 case StepKind.Wait when step.Delay is null:
                     errors.Add($"The wait of step {i + 1} needs a duration.");
                     break;
+                case StepKind.RunSequence when step.SequenceId is null:
+                    errors.Add($"Step {i + 1} must say which sequence to run.");
+                    break;
             }
 
             if (step.VerificationTimeoutMs is < 0)

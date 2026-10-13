@@ -8,7 +8,7 @@ using AutoPlay.Domain.Model;
 namespace AutoPlay.App.Services;
 
 /// <summary>Orchestrates the recording of a new screen (framing, capture, annotation) and the editing of an existing one.</summary>
-public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialogs dialogs) : IScreenRecordingFlow
+public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialogs dialogs, ActivityTracker activity) : IScreenRecordingFlow
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before capturing.</summary>
     private static readonly TimeSpan CaptureDelay = TimeSpan.FromMilliseconds(300);
@@ -16,6 +16,7 @@ public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialog
     /// <summary>Records a new screen. Returns true if it was saved.</summary>
     public async Task<bool> RecordNewAsync(Profile profile)
     {
+        using var busy = activity.Begin();
         // The main window is hidden so that it does not cover the target area or appear in the capture.
         var mainWindow = System.Windows.Application.Current.MainWindow;
         mainWindow.Hide();
@@ -46,6 +47,7 @@ public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialog
     /// <summary>Edits the locations of an existing screen on its stored capture. Returns true if it was saved.</summary>
     public bool Edit(Profile profile, Screen screen)
     {
+        using var busy = activity.Begin();
         var capture = screenService.GetCapture(profile.Id, screen.Id);
         var editor = new ScreenEditorWindow(new ScreenEditorViewModel(screenService, dialogs, profile.Id, capture, screen))
         {

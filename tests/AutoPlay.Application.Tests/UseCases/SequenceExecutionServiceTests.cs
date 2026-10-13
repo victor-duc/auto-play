@@ -23,7 +23,7 @@ public class SequenceExecutionServiceTests
             _repository.Templates[(_screen.Id, location.Id)] = TestImages.Solid(4, 4);
         }
 
-        _service = new SequenceExecutionService(_repository, _repository);
+        _service = new SequenceExecutionService(_repository, _repository, _repository);
     }
 
     private Sequence SequenceOn(params Guid[] locationIds) => new()
@@ -38,7 +38,7 @@ public class SequenceExecutionServiceTests
         var result = _service.PrepareRun(_profileId, SequenceOn(_screen.Locations[0].Id));
 
         Assert.True(result.Succeeded);
-        var assets = Assert.Single(result.Value!).Value;
+        var assets = Assert.Single(result.Value!.Screens).Value;
         Assert.Same(_screen, assets.Screen);
         Assert.Equal(2, assets.Templates.Count);
     }
@@ -52,7 +52,40 @@ public class SequenceExecutionServiceTests
         var result = _service.PrepareRun(_profileId, sequence);
 
         Assert.True(result.Succeeded);
-        Assert.Single(result.Value!);
+        Assert.Single(result.Value!.Screens);
+    }
+
+    [Fact]
+    public void PrepareRun_expands_the_sequences_run_by_the_sequence()
+    {
+        var inner = SequenceOn(_screen.Locations[1].Id);
+        inner.RepeatCount = 2;
+        _repository.SaveSequence(_profileId, inner);
+        var root = SequenceOn(_screen.Locations[0].Id);
+        root.Steps.Add(new SequenceStep { Kind = StepKind.RunSequence, SequenceId = inner.Id });
+        root.Steps.Add(SequenceStep.Wait(new DelayRange(1, 1)));
+
+        var result = _service.PrepareRun(_profileId, root);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            [_screen.Locations[0].Id, _screen.Locations[1].Id, _screen.Locations[1].Id, Guid.Empty],
+            result.Value!.Sequence.Steps.Select(s => s.LocationId));
+        Assert.Equal(0, result.Value.ExpandedIndexOf(0));
+        Assert.Equal(1, result.Value.ExpandedIndexOf(1));
+        Assert.Equal(3, result.Value.ExpandedIndexOf(2));
+        Assert.Equal(0, result.Value.ExpandedIndexOf(99));
+    }
+
+    [Fact]
+    public void PrepareRun_refuses_broken_chaining()
+    {
+        var root = SequenceOn(_screen.Locations[0].Id);
+        root.Steps.Add(new SequenceStep { Kind = StepKind.RunSequence, SequenceId = Guid.NewGuid() });
+
+        var result = _service.PrepareRun(_profileId, root);
+
+        Assert.Equal(["Step 2 of 'Raids' runs a sequence that no longer exists.", "Edit the sequence first."], result.Errors);
     }
 
     [Fact]

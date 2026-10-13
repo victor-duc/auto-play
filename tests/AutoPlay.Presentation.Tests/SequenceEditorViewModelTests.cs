@@ -214,6 +214,106 @@ public class SequenceEditorViewModelTests
     }
 
     [Fact]
+    public void Other_sequences_can_be_run_by_a_step()
+    {
+        var other = new Sequence { Name = "Collect" };
+        _repository.SaveSequence(_profile.Id, other);
+        var editor = NewEditor();
+        editor.Name = "Daily";
+
+        Assert.True(editor.HasOtherSequences);
+        editor.AddRunSequenceCommand.Execute(null);
+        editor.SaveCommand.Execute(null);
+
+        Assert.Equal("Run 'Collect'", editor.Steps[0].Title);
+        var saved = _repository.Sequences[_profile.Id].Single(s => s.Name == "Daily");
+        Assert.Equal(StepKind.RunSequence, saved.Steps[0].Kind);
+        Assert.Equal(other.Id, saved.Steps[0].SequenceId);
+    }
+
+    [Fact]
+    public void The_edited_sequence_is_not_offered_to_itself()
+    {
+        var existing = new Sequence { Name = "Self" };
+        _repository.SaveSequence(_profile.Id, existing);
+
+        var editor = NewEditor(existing);
+
+        Assert.Empty(editor.SequenceChoices);
+        Assert.False(editor.AddRunSequenceCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Steps_running_a_deleted_sequence_are_flagged()
+    {
+        var existing = new Sequence
+        {
+            Name = "Old",
+            Steps = [new SequenceStep { Kind = StepKind.RunSequence, SequenceId = Guid.NewGuid() }],
+        };
+
+        var step = Assert.Single(NewEditor(existing).Steps);
+
+        Assert.True(step.IsMissing);
+        Assert.Equal("Missing sequence", step.Title);
+    }
+
+    [Fact]
+    public void Schedule_is_saved_with_its_days()
+    {
+        var editor = NewEditor();
+        editor.Name = "Daily";
+        Add(editor, "A");
+        editor.ScheduleEnabled = true;
+        editor.ScheduleTimeText = "7:45";
+        editor.Days.Single(d => d.Day == DayOfWeek.Saturday).IsChecked = true;
+
+        editor.SaveCommand.Execute(null);
+
+        var schedule = Assert.Single(_repository.Sequences[_profile.Id]).Schedule!;
+        Assert.True(schedule.Enabled);
+        Assert.Equal(new TimeOnly(7, 45), schedule.Time);
+        Assert.Equal([DayOfWeek.Saturday], schedule.Days);
+    }
+
+    [Fact]
+    public void Invalid_schedule_time_is_reported_only_when_enabled()
+    {
+        var editor = NewEditor();
+        editor.Name = "Daily";
+        Add(editor, "A");
+        editor.ScheduleTimeText = "soon";
+
+        editor.ScheduleEnabled = true;
+        editor.SaveCommand.Execute(null);
+        Assert.Equal("The start time must be written as hours:minutes, for example 08:30.", editor.ErrorMessage);
+
+        editor.ScheduleEnabled = false;
+        editor.SaveCommand.Execute(null);
+        Assert.Null(Assert.Single(_repository.Sequences[_profile.Id]).Schedule);
+    }
+
+    [Fact]
+    public void Disabled_schedule_keeps_its_settings()
+    {
+        var existing = new Sequence
+        {
+            Name = "Daily",
+            Steps = [new SequenceStep { ScreenId = _screen.Id, LocationId = _screen.Locations[0].Id }],
+            Schedule = new SequenceSchedule { Enabled = true, Time = new TimeOnly(21, 0) },
+        };
+        var editor = NewEditor(existing);
+        Assert.Equal("21:00", editor.ScheduleTimeText);
+
+        editor.ScheduleEnabled = false;
+        editor.SaveCommand.Execute(null);
+
+        var schedule = Assert.Single(_repository.Sequences[_profile.Id]).Schedule!;
+        Assert.False(schedule.Enabled);
+        Assert.Equal(new TimeOnly(21, 0), schedule.Time);
+    }
+
+    [Fact]
     public void Step_summary_describes_the_effective_settings()
     {
         var editor = NewEditor();

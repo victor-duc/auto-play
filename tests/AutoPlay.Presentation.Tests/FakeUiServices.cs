@@ -42,9 +42,16 @@ internal sealed class FakeFlows : IScreenRecordingFlow, ISequenceEditingFlow, IS
 
     public bool Edit(Profile profile, Sequence? sequence) => OnEditSequence(profile, sequence);
 
-    public Task RunAsync(Profile profile, Sequence sequence)
+    public List<RunOptions> RunOptions { get; } = [];
+
+    public bool IsRunning { get; set; }
+
+    public bool RunResult { get; set; } = true;
+
+    public Task<bool> RunAsync(Profile profile, Sequence sequence, RunOptions? options = null)
     {
         Runs.Add(sequence);
-        return Task.CompletedTask;
+        RunOptions.Add(options ?? new RunOptions());
+        return Task.FromResult(RunResult);
     }
 }

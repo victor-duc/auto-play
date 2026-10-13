@@ -63,6 +63,7 @@ public partial class App : System.Windows.Application
         var mainWindow = _services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
+        StartScheduler();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -116,10 +117,17 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ScreenService>();
         services.AddSingleton<SequenceService>();
         services.AddSingleton<SequenceExecutionService>();
+        services.AddSingleton<ScheduleService>();
         services.AddTransient<SequenceRunner>();
 
         // Driving adapter (WPF user interface)
         services.AddSingleton<IUserDialogs, MessageBoxDialogs>();
+        services.AddSingleton<ActivityTracker>();
+        services.AddSingleton(sp => new RunScheduler(
+            sp.GetRequiredService<ScheduleService>(),
+            sp.GetRequiredService<ISequenceExecutionFlow>(),
+            sp.GetRequiredService<ActivityTracker>(),
+            () => DateTime.Now));
         services.AddSingleton<IScreenRecordingFlow, ScreenRecordingFlow>();
         services.AddSingleton<ISequenceEditingFlow, SequenceEditingFlow>();
         services.AddSingleton<ISequenceExecutionFlow, SequenceExecutionFlow>();
@@ -127,6 +135,17 @@ public partial class App : System.Windows.Application
         services.AddSingleton<MainWindow>();
 
         return services;
+    }
+
+    /// <summary>Checks the scheduled sequences every 10 seconds while AutoPlay is running.</summary>
+    private void StartScheduler()
+    {
+        var scheduler = _services!.GetRequiredService<RunScheduler>();
+        scheduler.Notification += (_, message) => AppLog.Scheduler(_logger, message);
+        _services!.GetRequiredService<MainViewModel>().AttachScheduler();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        timer.Tick += async (_, _) => await scheduler.CheckAsync();
+        timer.Start();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

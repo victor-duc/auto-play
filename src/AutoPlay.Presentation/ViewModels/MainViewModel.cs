@@ -16,8 +16,18 @@ public sealed partial class MainViewModel(
     ISequenceExecutionFlow sequenceExecution,
     IUserDialogs dialogs,
     IShellLauncher shell,
-    AppPaths paths) : ObservableObject
+    AppPaths paths,
+    RunScheduler? scheduler = null) : ObservableObject
 {
+    /// <summary>Shows the scheduler messages in the status bar.</summary>
+    public void AttachScheduler()
+    {
+        if (scheduler is not null)
+        {
+            scheduler.Notification += (_, message) => StatusMessage = message;
+        }
+    }
+
     [RelayCommand]
     private void OpenLogsFolder() => shell.Open(paths.Logs);
 
@@ -158,7 +168,12 @@ public sealed partial class MainViewModel(
             return;
         }
 
-        if (!dialogs.Confirm($"Delete the sequence '{sequence.Name}'?", "AutoPlay"))
+        var callers = sequenceService.GetCallers(profile.Id, sequence.Id);
+        var warning = callers.Count == 0
+            ? string.Empty
+            : $"{Environment.NewLine}{Environment.NewLine}It is run by: {string.Join(", ", callers.Select(c => c.Name))}. "
+              + "The steps running it will have to be removed from these sequences.";
+        if (!dialogs.Confirm($"Delete the sequence '{sequence.Name}'?{warning}", "AutoPlay"))
         {
             return;
         }

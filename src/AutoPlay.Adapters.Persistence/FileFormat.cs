@@ -14,7 +14,7 @@ namespace AutoPlay.Adapters.Persistence;
 /// properties (<c>right</c>, <c>center</c>, <c>isEmpty</c>…) that are ignored on read.</item>
 /// <item>1 — <c>schemaVersion</c> added, computed properties removed.</item>
 /// <item>2 — new properties, with defaults for older files: <c>matchColors</c> on locations (false);
-/// <c>kind</c> (Click) and <c>sequenceId</c> (null) on sequence steps.</item>
+/// <c>kind</c> (Click) and <c>sequenceId</c> (null) on sequence steps; <c>schedule</c> (null) on sequences.</item>
 /// </list>
 /// When the format changes, increment <see cref="CurrentVersion"/>, update the schemas and add the
 /// conversion of older files to <see cref="Migrate"/>.

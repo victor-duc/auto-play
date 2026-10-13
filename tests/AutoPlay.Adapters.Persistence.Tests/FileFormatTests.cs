@@ -105,7 +105,9 @@ public sealed class FileFormatTests : IDisposable
                     Verify = false,
                 },
                 SequenceStep.Wait(new DelayRange(1000, 2000)),
+                new SequenceStep { Kind = StepKind.RunSequence, SequenceId = Guid.NewGuid() },
             ],
+            Schedule = new SequenceSchedule { Time = new TimeOnly(8, 30), Days = [DayOfWeek.Monday, DayOfWeek.Friday] },
         };
         _store.SaveSequence(_profile.Id, sequence);
 
@@ -182,6 +184,23 @@ public sealed class FileFormatTests : IDisposable
         json["steps"]![0]!["delay"] = null;
 
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Sequence, json.ToJsonString()));
+    }
+
+    [Fact]
+    public void Schedule_round_trips()
+    {
+        var sequence = new Sequence
+        {
+            Name = "S",
+            Schedule = new SequenceSchedule { Enabled = false, Time = new TimeOnly(23, 59, 30), Days = [DayOfWeek.Sunday] },
+        };
+        _store.SaveSequence(_profile.Id, sequence);
+
+        var schedule = Assert.Single(_store.LoadSequences(_profile.Id)).Schedule!;
+
+        Assert.False(schedule.Enabled);
+        Assert.Equal(new TimeOnly(23, 59, 30), schedule.Time);
+        Assert.Equal([DayOfWeek.Sunday], schedule.Days);
     }
 
     // ---- Older and newer versions

@@ -19,8 +19,19 @@ public interface ISequenceEditingFlow
     bool Edit(Profile profile, Sequence? sequence);
 }
 
+/// <summary>How a sequence is started.</summary>
+/// <param name="StartStep">Index of the step of the sequence to start from (0 = the beginning).</param>
+/// <param name="Unattended">
+/// True for a scheduled start: no framing confirmation, the profile's last target region is used.
+/// </param>
+public sealed record RunOptions(int StartStep = 0, bool Unattended = false);
+
 /// <summary>Runs a sequence: framing of the target region, then the run status window.</summary>
 public interface ISequenceExecutionFlow
 {
-    Task RunAsync(Profile profile, Sequence sequence);
+    /// <summary>Whether a run is in progress (its status window is open).</summary>
+    bool IsRunning { get; }
+
+    /// <summary>Runs the sequence; returns false if it could not start (invalid sequence, framing cancelled…).</summary>
+    Task<bool> RunAsync(Profile profile, Sequence sequence, RunOptions? options = null);
 }

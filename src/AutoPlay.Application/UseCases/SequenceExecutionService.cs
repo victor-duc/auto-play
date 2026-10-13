@@ -12,22 +12,33 @@ namespace AutoPlay.Application.UseCases;
 /// Use cases around a run: prepare what the <see cref="SequenceRunner"/> needs, and keep a diagnostic
 /// capture when a verification fails.
 /// </summary>
-public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogStore runLogs, ILogger<SequenceExecutionService>? logger = null)
+public sealed class SequenceExecutionService(
+    IScreenRepository screens,
+    ISequenceRepository sequences,
+    IRunLogStore runLogs,
+    ILogger<SequenceExecutionService>? logger = null)
 {
     private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
 
     /// <summary>
-    /// Checks that the sequence can run and loads the screens it uses with their template images.
+    /// Checks that the sequence can run, expands the sequences it runs, and loads the screens it clicks on
+    /// with their template images.
     /// </summary>
-    public OperationResult<IReadOnlyDictionary<Guid, ScreenAssets>> PrepareRun(Guid profileId, Sequence sequence)
+    public OperationResult<PreparedRun> PrepareRun(Guid profileId, Sequence sequence)
     {
         try
         {
-            var profileScreens = screens.LoadScreens(profileId);
-            var clickSteps = sequence.Steps.Where(s => s.Kind == StepKind.Click).ToList();
-            if (sequence.Steps.Count == 0 || clickSteps.Any(step => SequenceValidator.FindLocation(profileScreens, step) is null))
+            var expansion = SequenceExpander.ExpandWithOffsets(sequence, sequences.LoadSequences(profileId));
+            if (expansion.Expanded is not { } expanded)
             {
-                return OperationResult.Failure<IReadOnlyDictionary<Guid, ScreenAssets>>(
+                return OperationResult.Failure<PreparedRun>([.. expansion.Errors, "Edit the sequence first."]);
+            }
+
+            var profileScreens = screens.LoadScreens(profileId);
+            var clickSteps = expanded.Steps.Where(s => s.Kind == StepKind.Click).ToList();
+            if (expanded.Steps.Count == 0 || clickSteps.Any(step => SequenceValidator.FindLocation(profileScreens, step) is null))
+            {
+                return OperationResult.Failure<PreparedRun>(
                     $"The sequence '{sequence.Name}' has no steps or refers to deleted screens or locations. Edit it first.");
             }
 
@@ -41,13 +52,12 @@ public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogS
                 assets[screenId] = new ScreenAssets(screen, templates);
             }
 
-            return OperationResult.Success<IReadOnlyDictionary<Guid, ScreenAssets>>(assets);
+            return OperationResult.Success(new PreparedRun(expanded, assets, expansion.StepOffsets));
         }
         catch (PersistenceException ex)
         {
             UseCaseLog.StorageError(_logger, ex);
-            return OperationResult.Failure<IReadOnlyDictionary<Guid, ScreenAssets>>(
-                $"The images of the sequence could not be loaded: {ex.Message}");
+            return OperationResult.Failure<PreparedRun>($"The images of the sequence could not be loaded: {ex.Message}");
         }
     }
 

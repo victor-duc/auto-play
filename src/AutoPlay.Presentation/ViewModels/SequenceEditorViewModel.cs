@@ -48,9 +48,22 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
             .ToList();
         SelectedScreenChoice = ScreenChoices.Count > 0 ? ScreenChoices[0] : null;
 
+        SequenceChoices = LoadOtherSequences(existingSequence?.Id);
+        SelectedSequenceChoice = SequenceChoices.Count > 0 ? SequenceChoices[0] : null;
+
         foreach (var step in existingSequence?.Steps ?? [])
         {
-            AddStepViewModel(Steps.Count, new StepViewModel(step, FindChoice(step), null, profile.Defaults));
+            AddStepViewModel(Steps.Count, new StepViewModel(step, FindChoice(step), FindSequenceChoice(step), profile.Defaults));
+        }
+
+        var schedule = existingSequence?.Schedule;
+        ScheduleEnabled = schedule?.Enabled == true;
+        ScheduleTimeText = (schedule?.Time ?? new TimeOnly(8, 0)).ToString("HH:mm", CultureInfo.InvariantCulture);
+        Days = [.. new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday }
+            .Select(day => new DayToggle(day, schedule?.Days.Contains(day) == true))];
+        foreach (var day in Days)
+        {
+            day.PropertyChanged += (_, _) => IsDirty = true;
         }
 
         Steps.CollectionChanged += OnStepsChanged;
@@ -68,6 +81,26 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     public IReadOnlyList<ScreenChoice> ScreenChoices { get; }
 
     public bool HasScreens => ScreenChoices.Count > 0;
+
+    /// <summary>The other sequences of the profile, which a step can run.</summary>
+    public IReadOnlyList<SequenceChoice> SequenceChoices { get; }
+
+    public bool HasOtherSequences => SequenceChoices.Count > 0;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddRunSequenceCommand))]
+    public partial SequenceChoice? SelectedSequenceChoice { get; set; }
+
+    /// <summary>Whether the sequence starts automatically at <see cref="ScheduleTimeText"/>.</summary>
+    [ObservableProperty]
+    public partial bool ScheduleEnabled { get; set; }
+
+    /// <summary>Time of the automatic start, as typed (HH:mm).</summary>
+    [ObservableProperty]
+    public partial string ScheduleTimeText { get; set; }
+
+    /// <summary>Days of the automatic start; none checked means every day.</summary>
+    public IReadOnlyList<DayToggle> Days { get; }
 
     public bool IsDirty { get; private set; }
 
@@ -109,6 +142,19 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
             null,
             _profile.Defaults);
         Insert(step);
+    }
+
+    private bool CanAddRunSequence() => SelectedSequenceChoice is not null;
+
+    /// <summary>Adds a step running the chosen sequence after the selected step (or at the end).</summary>
+    [RelayCommand(CanExecute = nameof(CanAddRunSequence))]
+    private void AddRunSequence()
+    {
+        if (SelectedSequenceChoice is { } choice)
+        {
+            Insert(new StepViewModel(
+                new SequenceStep { Kind = StepKind.RunSequence, SequenceId = choice.Id }, null, choice, _profile.Defaults));
+        }
     }
 
     /// <summary>Adds a one-second wait after the selected step (or at the end) and selects it.</summary>
@@ -185,7 +231,13 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
             steps.Add(step);
         }
 
-        var sequence = new Sequence { Id = _sequenceId, Name = Name, RepeatCount = repeatCount, Steps = steps };
+        if (!TryBuildSchedule(out var schedule, out var scheduleError))
+        {
+            ErrorMessage = scheduleError;
+            return;
+        }
+
+        var sequence = new Sequence { Id = _sequenceId, Name = Name, RepeatCount = repeatCount, Steps = steps, Schedule = schedule };
         var result = _sequenceService.Save(_profile.Id, sequence);
         if (!result.Succeeded)
         {
@@ -212,6 +264,10 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         !IsDirty || _dialogs.Confirm("Discard the changes made to this sequence?", "AutoPlay");
 
     partial void OnNameChanged(string value) => IsDirty = true;
+
+    partial void OnScheduleEnabledChanged(bool value) => IsDirty = true;
+
+    partial void OnScheduleTimeTextChanged(string value) => IsDirty = true;
 
     partial void OnRepeatCountTextChanged(string value) => IsDirty = true;
 
@@ -258,6 +314,59 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         {
             Steps[i].Number = i + 1;
         }
+    }
+
+    private SequenceChoice? FindSequenceChoice(SequenceStep step) =>
+        step.Kind == StepKind.RunSequence ? SequenceChoices.FirstOrDefault(c => c.Id == step.SequenceId) : null;
+
+    private List<SequenceChoice> LoadOtherSequences(Guid? currentId)
+    {
+        try
+        {
+            return _sequenceService.GetSequences(_profile.Id)
+                .Where(s => s.Id != currentId)
+                .Select(s => new SequenceChoice(s.Id, s.Name))
+                .ToList();
+        }
+        catch (PersistenceException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Builds the schedule from the fields. A disabled schedule is kept (with its time and days) if the time is valid,
+    /// so that it can be enabled again later.
+    /// </summary>
+    private bool TryBuildSchedule(out SequenceSchedule? schedule, out string? error)
+    {
+        schedule = null;
+        error = null;
+        var parsed = TimeOnly.TryParseExact(
+            ScheduleTimeText.Trim(), ["H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var time);
+        if (!parsed)
+        {
+            if (ScheduleEnabled)
+            {
+                error = "The start time must be written as hours:minutes, for example 08:30.";
+                return false;
+            }
+
+            return true;
+        }
+
+        schedule = new SequenceSchedule
+        {
+            Enabled = ScheduleEnabled,
+            Time = time,
+            Days = Days.Where(d => d.IsChecked).Select(d => d.Day).ToList(),
+        };
+        if (!ScheduleEnabled && schedule.Days.Count == 0 && time == new TimeOnly(8, 0))
+        {
+            schedule = null; // Untouched defaults: no schedule.
+        }
+
+        return true;
     }
 
     private LocationChoice? FindChoice(SequenceStep step) =>

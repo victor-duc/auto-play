@@ -98,8 +98,11 @@ public sealed partial class RunStatusViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(OpenLogImageCommand))]
     public partial string? LogImagePath { get; set; }
 
-    /// <summary>Starts the run from the first step.</summary>
-    public Task StartAsync() => RunFromAsync(default);
+    /// <summary>Where the first run starts (by default, the first step).</summary>
+    public RunPosition StartPosition { get; init; }
+
+    /// <summary>Starts the run from <see cref="StartPosition"/>.</summary>
+    public Task StartAsync() => RunFromAsync(StartPosition);
 
     private bool CanStop() => IsRunning;
 

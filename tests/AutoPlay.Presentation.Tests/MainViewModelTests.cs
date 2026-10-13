@@ -97,6 +97,24 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void DeleteSequence_lists_the_sequences_running_it()
+    {
+        var profile = AddProfileWithScreenAndSequence(out _, out var sequence);
+        _repository.SaveSequence(profile.Id, new Sequence
+        {
+            Name = "Daily",
+            Steps = [new SequenceStep { Kind = StepKind.RunSequence, SequenceId = sequence.Id }],
+        });
+        _viewModel.Load();
+        _viewModel.SelectedSequence = _viewModel.Sequences.Single(s => s.Id == sequence.Id);
+        _dialogs.ConfirmAnswer = false;
+
+        _viewModel.DeleteSequenceCommand.Execute(null);
+
+        Assert.Contains("It is run by: Daily.", Assert.Single(_dialogs.Confirmations));
+    }
+
+    [Fact]
     public void DuplicateSequence_selects_the_copy()
     {
         AddProfileWithScreenAndSequence(out _, out var sequence);
