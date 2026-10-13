@@ -8,4 +8,7 @@ internal static partial class UseCaseLog
 {
     [LoggerMessage(Level = LogLevel.Warning, Message = "Storage error")]
     public static partial void StorageError(ILogger logger, PersistenceException exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Quick capture added to the profile '{Profile}'")]
+    public static partial void QuickCaptured(ILogger logger, string profile);
 }

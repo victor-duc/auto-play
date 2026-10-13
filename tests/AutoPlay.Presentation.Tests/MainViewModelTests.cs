@@ -27,7 +27,8 @@ public class MainViewModelTests
             _flows,
             _dialogs,
             _shell,
-            new AppPaths("root"));
+            new AppPaths("root"),
+            captureInbox: new CaptureInboxService(_repository, new FakeScreenCapture(), new FakeClock()));
     }
 
     [Fact]
@@ -183,5 +184,64 @@ public class MainViewModelTests
         _repository.Sequences[profile.Id] = [sequence];
         _viewModel.Load();
         return profile;
+    }
+
+    [Fact]
+    public void QuickCapture_adds_a_pending_capture_to_the_selected_profile()
+    {
+        _repository.Profiles.Add(new Profile { Name = "Game", LastTargetRegion = new(0, 0, 40, 30) });
+        _viewModel.Load();
+
+        Assert.True(_viewModel.QuickCapture());
+
+        Assert.Single(_viewModel.PendingCaptures);
+        Assert.True(_viewModel.HasPendingCaptures);
+        Assert.StartsWith("Screen captured", _viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void QuickCapture_explains_why_it_cannot_capture()
+    {
+        Assert.False(_viewModel.QuickCapture());
+        Assert.Equal("Quick capture: select a profile first.", _viewModel.StatusMessage);
+
+        _repository.Profiles.Add(new Profile { Name = "Game" });
+        _viewModel.Load();
+
+        Assert.False(_viewModel.QuickCapture());
+        Assert.Contains("target area is not known", _viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void Annotating_a_pending_capture_removes_it_once_the_screen_is_saved()
+    {
+        _repository.Profiles.Add(new Profile { Name = "Game", LastTargetRegion = new(0, 0, 40, 30) });
+        _viewModel.Load();
+        _viewModel.QuickCapture();
+        var capture = _viewModel.PendingCaptures[0];
+
+        _flows.AnnotateResult = false;
+        _viewModel.AnnotateCaptureCommand.Execute(capture);
+        Assert.Single(_viewModel.PendingCaptures);
+
+        _flows.AnnotateResult = true;
+        _viewModel.AnnotateCaptureCommand.Execute(capture);
+
+        Assert.Equal(2, _flows.Annotated.Count);
+        Assert.Equal(40, _flows.Annotated[0].Width);
+        Assert.Empty(_viewModel.PendingCaptures);
+    }
+
+    [Fact]
+    public void DiscardCapture_removes_it()
+    {
+        _repository.Profiles.Add(new Profile { Name = "Game", LastTargetRegion = new(0, 0, 40, 30) });
+        _viewModel.Load();
+        _viewModel.QuickCapture();
+
+        _viewModel.DiscardCaptureCommand.Execute(_viewModel.PendingCaptures[0]);
+
+        Assert.Empty(_viewModel.PendingCaptures);
+        Assert.False(_viewModel.HasPendingCaptures);
     }
 }

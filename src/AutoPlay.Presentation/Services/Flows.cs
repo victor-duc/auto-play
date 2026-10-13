@@ -1,3 +1,4 @@
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 
 namespace AutoPlay.Presentation.Services;
@@ -16,6 +17,9 @@ public interface IScreenRecordingFlow
     /// Returns true if the screen was saved.
     /// </summary>
     Task<bool> RecaptureAsync(Profile profile, Screen screen);
+
+    /// <summary>Annotates a quick capture as a new screen. Returns true if the screen was saved.</summary>
+    bool AnnotateCapture(Profile profile, RawImage capture);
 }
 
 /// <summary>Opens the settings window.</summary>

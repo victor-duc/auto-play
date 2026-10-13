@@ -18,8 +18,96 @@ public sealed partial class MainViewModel(
     IShellLauncher shell,
     AppPaths paths,
     RunScheduler? scheduler = null,
-    ISettingsFlow? settingsFlow = null) : ObservableObject
+    ISettingsFlow? settingsFlow = null,
+    CaptureInboxService? captureInbox = null) : ObservableObject
 {
+    /// <summary>Quick captures of the selected profile waiting to be annotated, oldest first.</summary>
+    public ObservableCollection<PendingCapture> PendingCaptures { get; } = [];
+
+    public bool HasPendingCaptures => PendingCaptures.Count > 0;
+
+    /// <summary>
+    /// Captures the last target region of the selected profile into the pending captures (quick capture hotkey).
+    /// Returns true if a capture was added.
+    /// </summary>
+    public bool QuickCapture()
+    {
+        if (captureInbox is null)
+        {
+            return false;
+        }
+
+        if (SelectedProfile is not { } profile)
+        {
+            StatusMessage = "Quick capture: select a profile first.";
+            return false;
+        }
+
+        var result = captureInbox.QuickCapture(profile);
+        if (!result.Succeeded)
+        {
+            StatusMessage = $"Quick capture: {string.Join(" ", result.Errors)}";
+            return false;
+        }
+
+        ReloadPendingCaptures();
+        StatusMessage = $"Screen captured ({PendingCaptures.Count} pending capture(s) to annotate).";
+        return true;
+    }
+
+    [RelayCommand]
+    private void AnnotateCapture(PendingCapture? capture)
+    {
+        if (captureInbox is null || SelectedProfile is not { } profile || capture is null)
+        {
+            return;
+        }
+
+        var knownIds = Screens.Select(s => s.Id).ToHashSet();
+        if (!screenRecording.AnnotateCapture(profile, captureInbox.GetImage(profile.Id, capture.Id)))
+        {
+            return;
+        }
+
+        captureInbox.Discard(profile.Id, capture.Id);
+        ReloadPendingCaptures();
+        ReloadScreens();
+        var created = Screens.FirstOrDefault(s => !knownIds.Contains(s.Id));
+        SelectedScreen = created;
+        StatusMessage = created is null ? "Screen saved." : $"Screen '{created.Name}' saved.";
+    }
+
+    [RelayCommand]
+    private void DiscardCapture(PendingCapture? capture)
+    {
+        if (captureInbox is null || SelectedProfile is not { } profile || capture is null)
+        {
+            return;
+        }
+
+        var result = captureInbox.Discard(profile.Id, capture.Id);
+        if (!result.Succeeded)
+        {
+            dialogs.ShowError(string.Join(Environment.NewLine, result.Errors));
+        }
+
+        ReloadPendingCaptures();
+    }
+
+    private void ReloadPendingCaptures()
+    {
+        PendingCaptures.Clear();
+        if (captureInbox is not null && SelectedProfile is { } profile)
+        {
+            foreach (var capture in captureInbox.GetPendingCaptures(profile.Id))
+            {
+                PendingCaptures.Add(capture);
+            }
+        }
+
+        OnPropertyChanged(nameof(HasPendingCaptures));
+    }
+
     [RelayCommand]
     private void OpenSettings()
     {
@@ -85,6 +173,7 @@ public sealed partial class MainViewModel(
     {
         ReloadScreens();
         ReloadSequences();
+        ReloadPendingCaptures();
     }
 
     private void ReloadSequences(Guid? sequenceToSelect = null)

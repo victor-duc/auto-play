@@ -3,6 +3,7 @@ using AutoPlay.Presentation.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Presentation.Services;
 using AutoPlay.Application.UseCases;
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 
 namespace AutoPlay.App.Services;
@@ -72,6 +73,17 @@ public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialog
             mainWindow.Show();
             mainWindow.Activate();
         }
+    }
+
+    /// <summary>Annotates a quick capture as a new screen. Returns true if it was saved.</summary>
+    public bool AnnotateCapture(Profile profile, RawImage capture)
+    {
+        using var busy = activity.Begin();
+        var editor = new ScreenEditorWindow(new ScreenEditorViewModel(screenService, dialogs, profile.Id, capture, null))
+        {
+            Owner = System.Windows.Application.Current.MainWindow,
+        };
+        return editor.ShowDialog() == true;
     }
 
     /// <summary>Edits the locations of an existing screen on its stored capture. Returns true if it was saved.</summary>

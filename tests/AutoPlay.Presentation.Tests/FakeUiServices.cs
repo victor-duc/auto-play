@@ -1,3 +1,4 @@
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Presentation.Services;
 
@@ -64,6 +65,16 @@ internal sealed class FakeFlows : IScreenRecordingFlow, ISequenceEditingFlow, IS
     {
         Recaptured.Add(screen);
         return Task.FromResult(true);
+    }
+
+    public List<RawImage> Annotated { get; } = [];
+
+    public bool AnnotateResult { get; set; } = true;
+
+    public bool AnnotateCapture(Profile profile, RawImage capture)
+    {
+        Annotated.Add(capture);
+        return AnnotateResult;
     }
 
     public bool Edit(Profile profile, Sequence? sequence) => OnEditSequence(profile, sequence);

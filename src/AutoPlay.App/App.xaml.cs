@@ -118,6 +118,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ISequenceRepository>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<IRunLogStore>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<IProfileArchive>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<ICaptureInbox>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddTransient(_ => new Random());
 
         // Application (use cases)
@@ -126,6 +127,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SequenceService>();
         services.AddSingleton<SequenceExecutionService>();
         services.AddSingleton<ScheduleService>();
+        services.AddSingleton<CaptureInboxService>();
         services.AddTransient<SequenceRunner>();
 
         // Driving adapter (WPF user interface)

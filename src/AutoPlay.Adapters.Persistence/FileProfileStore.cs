@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
 using AutoPlay.Application.Ports;
@@ -12,12 +13,13 @@ namespace AutoPlay.Adapters.Persistence;
 /// root/&lt;profile-id&gt;/profile.json
 ///                  /screens/&lt;screen-id&gt;/screen.json, capture.png, locations/&lt;location-id&gt;.png
 ///                  /sequences/&lt;sequence-id&gt;.json
+///                  /inbox/&lt;utc-time&gt;_&lt;capture-id&gt;.png
 ///                  /logs/*.png
 /// </code>
 /// </summary>
 /// <remarks>Input/output, JSON and image errors are reported as <see cref="PersistenceException"/>.</remarks>
 public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
-    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, IProfileArchive
+    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, IProfileArchive, ICaptureInbox
 {
     private const string ProfileFileName = "profile.json";
     private const string ScreenFileName = "screen.json";
@@ -63,6 +65,18 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
 
     public void ExportProfile(Guid profileId, string destinationPath) =>
         Guard(() => ExportProfileCore(profileId, destinationPath), "The profile could not be exported");
+
+    public IReadOnlyList<PendingCapture> LoadPendingCaptures(Guid profileId) =>
+        Guard(() => LoadPendingCapturesCore(profileId), "The pending captures could not be loaded");
+
+    public void SavePendingCapture(Guid profileId, PendingCapture capture, RawImage image) =>
+        Guard(() => SavePendingCaptureCore(profileId, capture, image), "The capture could not be saved");
+
+    public RawImage LoadPendingCaptureImage(Guid profileId, Guid captureId) =>
+        Guard(() => imageCodec.Decode(File.ReadAllBytes(PendingCapturePath(profileId, captureId))), "The capture could not be loaded");
+
+    public void DeletePendingCapture(Guid profileId, Guid captureId) =>
+        Guard(() => DeletePendingCaptureCore(profileId, captureId), "The capture could not be deleted");
 
     private List<Profile> LoadProfilesCore()
     {
@@ -186,8 +200,61 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
             return true;
         }, message);
 
-    /// <summary>Folders of a profile that are not exported (diagnostics only).</summary>
-    private static readonly string[] NotExportedFolders = ["logs"];
+    /// <summary>Folders of a profile that are not exported (diagnostics and work in progress).</summary>
+    private static readonly string[] NotExportedFolders = ["logs", InboxFolderName];
+
+    private const string InboxFolderName = "inbox";
+
+    /// <summary>Format of the capture time in the file names of the inbox, which keeps them sorted by time.</summary>
+    private const string InboxTimeFormat = "yyyyMMdd'T'HHmmssfff'Z'";
+
+    private List<PendingCapture> LoadPendingCapturesCore(Guid profileId)
+    {
+        var inboxDirectory = Path.Combine(ProfileDirectory(profileId), InboxFolderName);
+        if (!Directory.Exists(inboxDirectory))
+        {
+            return [];
+        }
+
+        var captures = new List<PendingCapture>();
+        foreach (var file in Directory.EnumerateFiles(inboxDirectory, "*.png"))
+        {
+            // Files that do not follow the naming pattern (e.g. copied by hand) are ignored.
+            var parts = Path.GetFileNameWithoutExtension(file).Split('_');
+            if (parts.Length == 2
+                && DateTimeOffset.TryParseExact(parts[0], InboxTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var capturedAt)
+                && Guid.TryParse(parts[1], out var id))
+            {
+                captures.Add(new PendingCapture(id, capturedAt));
+            }
+        }
+
+        return captures;
+    }
+
+    private void SavePendingCaptureCore(Guid profileId, PendingCapture capture, RawImage image)
+    {
+        var inboxDirectory = Path.Combine(ProfileDirectory(profileId), InboxFolderName);
+        Directory.CreateDirectory(inboxDirectory);
+        var fileName = $"{capture.CapturedAt.UtcDateTime.ToString(InboxTimeFormat, CultureInfo.InvariantCulture)}_{capture.Id}.png";
+        File.WriteAllBytes(Path.Combine(inboxDirectory, fileName), imageCodec.EncodePng(image));
+    }
+
+    private void DeletePendingCaptureCore(Guid profileId, Guid captureId)
+    {
+        var path = PendingCapturePath(profileId, captureId);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    private string PendingCapturePath(Guid profileId, Guid captureId)
+    {
+        var inboxDirectory = Path.Combine(ProfileDirectory(profileId), InboxFolderName);
+        var matches = Directory.Exists(inboxDirectory) ? Directory.GetFiles(inboxDirectory, $"*_{captureId}.png") : [];
+        return matches.Length > 0 ? matches[0] : Path.Combine(inboxDirectory, $"{captureId}.png");
+    }
 
     private void ExportProfileCore(Guid profileId, string destinationPath)
     {

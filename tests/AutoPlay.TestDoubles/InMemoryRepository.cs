@@ -5,7 +5,7 @@ using AutoPlay.Domain.Model;
 namespace AutoPlay.TestDoubles;
 
 /// <summary>In-memory implementation of the persistence ports.</summary>
-public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore
+public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, ICaptureInbox
 {
     public List<Profile> Profiles { get; } = [];
 
@@ -18,6 +18,8 @@ public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, 
     public Dictionary<Guid, List<Sequence>> Sequences { get; } = [];
 
     public List<(string Name, RawImage Image)> LogImages { get; } = [];
+
+    public Dictionary<Guid, List<(PendingCapture Capture, RawImage Image)>> Inbox { get; } = [];
 
     /// <summary>When set, every operation throws this error (simulates a storage failure).</summary>
     public PersistenceException? Failure { get; set; }
@@ -85,6 +87,27 @@ public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, 
         LogImages.Add((name, image));
         return $"logs/{name}.png";
     }
+
+    public IReadOnlyList<PendingCapture> LoadPendingCaptures(Guid profileId) =>
+        Check(InboxOf(profileId).Select(entry => entry.Capture).ToList());
+
+    public void SavePendingCapture(Guid profileId, PendingCapture capture, RawImage image)
+    {
+        Check(0);
+        InboxOf(profileId).Add((capture, image));
+    }
+
+    public RawImage LoadPendingCaptureImage(Guid profileId, Guid captureId) =>
+        Check(InboxOf(profileId).First(entry => entry.Capture.Id == captureId).Image);
+
+    public void DeletePendingCapture(Guid profileId, Guid captureId)
+    {
+        Check(0);
+        InboxOf(profileId).RemoveAll(entry => entry.Capture.Id == captureId);
+    }
+
+    private List<(PendingCapture Capture, RawImage Image)> InboxOf(Guid profileId) =>
+        Inbox.TryGetValue(profileId, out var list) ? list : Inbox[profileId] = [];
 
     private List<Screen> ScreensOf(Guid profileId) =>
         Screens.TryGetValue(profileId, out var list) ? list : Screens[profileId] = [];

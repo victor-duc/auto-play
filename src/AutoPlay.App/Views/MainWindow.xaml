@@ -65,6 +65,29 @@
                                 ToolTip="Capture the selected screen again (e.g. after a game update) and re-position its locations automatically." />
                         <Button Content="Delete" Command="{Binding DeleteScreenCommand}" />
                     </StackPanel>
+                    <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8" CornerRadius="4" Background="{StaticResource PanelBrush}"
+                            Visibility="{Binding HasPendingCaptures, Converter={StaticResource BooleanToVisibility}}">
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold" Text="{Binding PendingCaptures.Count, StringFormat='Pending captures ({0})'}"
+                                       ToolTip="Screens captured with the quick capture shortcut, to annotate as screens." />
+                            <ItemsControl ItemsSource="{Binding PendingCaptures}" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,2">
+                                            <Button DockPanel.Dock="Right" Margin="4,0,0,0" Content="Discard"
+                                                    Command="{Binding DataContext.DiscardCaptureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button DockPanel.Dock="Right" Margin="4,0,0,0" Content="Annotate…"
+                                                    Command="{Binding DataContext.AnnotateCaptureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}" ToolTip="Draw the click locations on this capture and save it as a screen." />
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Text="{Binding CapturedAt.LocalDateTime, StringFormat='Captured on {0:g}'}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
                     <ListBox ItemsSource="{Binding Screens}" SelectedItem="{Binding SelectedScreen}">
                         <ListBox.InputBindings>
                             <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditScreenCommand}" />
