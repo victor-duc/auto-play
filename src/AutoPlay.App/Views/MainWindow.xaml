@@ -11,6 +11,9 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="_Export profile…" Command="{Binding ExportProfileCommand}"
+                          ToolTip="Save the selected profile (screens, images, sequences) as a .zip file, for backup or sharing" />
+                <Separator />
                 <MenuItem Header="Open _data folder" Command="{Binding OpenDataFolderCommand}" />
                 <MenuItem Header="Open _logs folder" Command="{Binding OpenLogsFolderCommand}" />
                 <Separator />

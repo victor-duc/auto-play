@@ -132,6 +132,40 @@ public sealed class FileProfileStoreTests : IDisposable
     }
 
     [Fact]
+    public void Export_writes_the_profile_without_its_logs()
+    {
+        var profile = new Profile { Name = "Game" };
+        _store.SaveProfile(profile);
+        var location = new Location { Name = "A", Bounds = new NormalizedRect(0, 0, 0.5, 0.5), ClickPoint = new NormalizedPoint(0.25, 0.25) };
+        var screen = new Screen { Name = "Map", RecordedRegionSize = new PixelSize(4, 4), Locations = [location] };
+        _store.SaveScreen(profile.Id, screen, TestImages.Solid(4, 4), new Dictionary<Guid, RawImage> { [location.Id] = TestImages.Solid(2, 2) });
+        var sequence = new Sequence { Name = "Raids" };
+        _store.SaveSequence(profile.Id, sequence);
+        _store.SaveLogImage(profile.Id, "failure", TestImages.Solid(2, 2));
+        var destination = Path.Combine(_root, "export.zip");
+
+        _store.ExportProfile(profile.Id, destination);
+
+        using var archive = System.IO.Compression.ZipFile.OpenRead(destination);
+        Assert.Equal(
+            [
+                "profile.json",
+                $"screens/{screen.Id}/capture.png",
+                $"screens/{screen.Id}/locations/{location.Id}.png",
+                $"screens/{screen.Id}/screen.json",
+                $"sequences/{sequence.Id}.json",
+            ],
+            archive.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
+        Assert.False(File.Exists(destination + ".tmp"));
+    }
+
+    [Fact]
+    public void Export_of_an_unknown_profile_is_a_persistence_error()
+    {
+        Assert.Throws<PersistenceException>(() => _store.ExportProfile(Guid.NewGuid(), Path.Combine(_root, "x.zip")));
+    }
+
+    [Fact]
     public void Corrupted_json_is_reported_as_a_persistence_error()
     {
         var profile = new Profile { Name = "Broken" };

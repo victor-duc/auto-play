@@ -151,6 +151,19 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void ExportProfile_proposes_a_file_name_and_can_be_cancelled()
+    {
+        _viewModel.NewProfileName = "Hero: Wars";
+        _viewModel.CreateProfileCommand.Execute(null);
+        var status = _viewModel.StatusMessage;
+
+        _viewModel.ExportProfileCommand.Execute(null);
+
+        Assert.Equal(["AutoPlay - Hero_ Wars.zip"], _dialogs.SaveFileNames);
+        Assert.Equal(status, _viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void Menu_opens_the_logs_and_data_folders()
     {
         _viewModel.OpenLogsFolderCommand.Execute(null);

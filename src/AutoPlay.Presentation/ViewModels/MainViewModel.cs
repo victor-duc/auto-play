@@ -41,7 +41,7 @@ public sealed partial class MainViewModel(
     public ObservableCollection<Sequence> Sequences { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(RecordScreenCommand), nameof(NewSequenceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand), nameof(ExportProfileCommand), nameof(RecordScreenCommand), nameof(NewSequenceCommand))]
     public partial Profile? SelectedProfile { get; set; }
 
     [ObservableProperty]
@@ -295,6 +295,34 @@ public sealed partial class MainViewModel(
     }
 
     private bool CanDeleteProfile() => SelectedProfile is not null;
+
+    [RelayCommand(CanExecute = nameof(CanDeleteProfile))]
+    private void ExportProfile()
+    {
+        if (SelectedProfile is not { } profile)
+        {
+            return;
+        }
+
+        // Characters that Windows does not accept in file names (whatever the OS running this code).
+        const string invalid = "\\/:*?\"<>|";
+        var safeName = new string(profile.Name.Select(c => invalid.Contains(c, StringComparison.Ordinal) || char.IsControl(c) ? '_' : c).ToArray());
+        var fileName = $"AutoPlay - {safeName}.zip";
+        if (dialogs.AskSaveFilePath($"Export the profile '{profile.Name}'", fileName, "Zip archive (*.zip)|*.zip") is not { } path)
+        {
+            return;
+        }
+
+        var result = profileService.ExportProfile(profile.Id, path);
+        if (result.Succeeded)
+        {
+            StatusMessage = $"Profile '{profile.Name}' exported to {path}.";
+        }
+        else
+        {
+            dialogs.ShowError(string.Join(Environment.NewLine, result.Errors));
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanDeleteProfile))]
     private void DeleteProfile()

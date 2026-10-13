@@ -18,6 +18,20 @@ internal sealed class FakeDialogs : IUserDialogs
     }
 
     public void ShowError(string message) => Errors.Add(message);
+
+    public List<string> Informations { get; } = [];
+
+    public string? SaveFilePath { get; set; }
+
+    public List<string> SaveFileNames { get; } = [];
+
+    public void ShowInformation(string message) => Informations.Add(message);
+
+    public string? AskSaveFilePath(string title, string defaultFileName, string filter)
+    {
+        SaveFileNames.Add(defaultFileName);
+        return SaveFilePath;
+    }
 }
 
 internal sealed class FakeShell : IShellLauncher

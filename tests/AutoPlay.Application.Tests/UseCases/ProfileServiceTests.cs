@@ -65,6 +65,21 @@ public class ProfileServiceTests
     }
 
     [Fact]
+    public void ExportProfile_reports_storage_errors()
+    {
+        var archive = new FailingArchive();
+        var service = new ProfileService(_repository, archive);
+
+        Assert.Equal(["Disk full"], service.ExportProfile(Guid.NewGuid(), "out.zip").Errors);
+        Assert.False(_service.ExportProfile(Guid.NewGuid(), "out.zip").Succeeded);
+    }
+
+    private sealed class FailingArchive : IProfileArchive
+    {
+        public void ExportProfile(Guid profileId, string destinationPath) => throw new PersistenceException("Disk full");
+    }
+
+    [Fact]
     public void DeleteProfile_removes_it()
     {
         var profile = _service.CreateProfile("Game").Value!;

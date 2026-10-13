@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Imaging;
@@ -16,7 +17,7 @@ namespace AutoPlay.Adapters.Persistence;
 /// </summary>
 /// <remarks>Input/output, JSON and image errors are reported as <see cref="PersistenceException"/>.</remarks>
 public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
-    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore
+    : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore, IProfileArchive
 {
     private const string ProfileFileName = "profile.json";
     private const string ScreenFileName = "screen.json";
@@ -59,6 +60,9 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
 
     public string SaveLogImage(Guid profileId, string name, RawImage image) =>
         Guard(() => SaveLogImageCore(profileId, name, image), "The log image could not be saved");
+
+    public void ExportProfile(Guid profileId, string destinationPath) =>
+        Guard(() => ExportProfileCore(profileId, destinationPath), "The profile could not be exported");
 
     private List<Profile> LoadProfilesCore()
     {
@@ -181,6 +185,37 @@ public sealed class FileProfileStore(string rootPath, IImageCodec imageCodec)
             action();
             return true;
         }, message);
+
+    /// <summary>Folders of a profile that are not exported (diagnostics only).</summary>
+    private static readonly string[] NotExportedFolders = ["logs"];
+
+    private void ExportProfileCore(Guid profileId, string destinationPath)
+    {
+        var profileDirectory = ProfileDirectory(profileId);
+        if (!File.Exists(Path.Combine(profileDirectory, ProfileFileName)))
+        {
+            throw new FileNotFoundException("The profile does not exist.", profileDirectory);
+        }
+
+        // Build the archive next to its destination, then move it, so that a failure never leaves a partial file.
+        var temporaryPath = destinationPath + ".tmp";
+        using (var archive = ZipFile.Open(temporaryPath, ZipArchiveMode.Create))
+        {
+            foreach (var file in Directory.EnumerateFiles(profileDirectory, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(profileDirectory, file);
+                var topFolder = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+                if (NotExportedFolders.Contains(topFolder, StringComparer.OrdinalIgnoreCase) || file.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                archive.CreateEntryFromFile(file, relativePath.Replace(Path.DirectorySeparatorChar, '/'), CompressionLevel.Optimal);
+            }
+        }
+
+        File.Move(temporaryPath, destinationPath, overwrite: true);
+    }
 
     private string ProfileDirectory(Guid profileId) => Path.Combine(RootPath, profileId.ToString());
 

@@ -110,6 +110,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IScreenRepository>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<ISequenceRepository>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddSingleton<IRunLogStore>(sp => sp.GetRequiredService<FileProfileStore>());
+        services.AddSingleton<IProfileArchive>(sp => sp.GetRequiredService<FileProfileStore>());
         services.AddTransient(_ => new Random());
 
         // Application (use cases)
