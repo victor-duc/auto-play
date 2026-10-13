@@ -79,12 +79,13 @@ public class SettingsViewModelTests
     public void Changing_the_data_folder_explains_when_it_applies()
     {
         var viewModel = NewViewModel(null);
-        _dialogs.FolderPath = "/new/folder";
+        var folder = Path.Combine(Path.GetTempPath(), "new-folder"); // Fully qualified on any OS.
+        _dialogs.FolderPath = folder;
 
         viewModel.BrowseDataFolderCommand.Execute(null);
         viewModel.SaveCommand.Execute(null);
 
-        Assert.Equal("/new/folder", _store.Saved!.DataFolder);
+        Assert.Equal(folder, _store.Saved!.DataFolder);
         Assert.Contains("next time AutoPlay starts", Assert.Single(_dialogs.Informations));
     }
 

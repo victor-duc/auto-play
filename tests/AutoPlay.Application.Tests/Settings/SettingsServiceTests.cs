@@ -24,7 +24,9 @@ public class SettingsServiceTests
     {
         AppSettings? notified = null;
         _service.Changed += (_, settings) => notified = settings;
-        var settings = new AppSettings { Theme = ThemePreference.Dark, DataFolder = " /data/autoplay " };
+        // A fully qualified path on the OS running the tests (C:\... on Windows, /... elsewhere).
+        var folder = Path.Combine(Path.GetTempPath(), "autoplay");
+        var settings = new AppSettings { Theme = ThemePreference.Dark, DataFolder = $" {folder} " };
 
         var result = _service.Save(settings);
 
@@ -32,7 +34,7 @@ public class SettingsServiceTests
         Assert.Same(settings, _store.Saved);
         Assert.Same(settings, notified);
         Assert.Same(settings, _service.Current);
-        Assert.Equal("/data/autoplay", settings.DataFolder);
+        Assert.Equal(folder, settings.DataFolder);
     }
 
     [Fact]
