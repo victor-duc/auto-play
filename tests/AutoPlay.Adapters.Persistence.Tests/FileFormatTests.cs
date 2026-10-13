@@ -116,6 +116,38 @@ public sealed class FileFormatTests : IDisposable
         Assert.Empty(JsonSchemas.Validate(JsonSchemas.Sequence, json));
     }
 
+    [Fact]
+    public void Settings_match_the_schema_and_round_trip()
+    {
+        var store = new JsonSettingsStore(Path.Combine(_root, "settings.json"));
+        Assert.Equal(AutoPlay.Application.Settings.ThemePreference.System, store.Load().Theme);
+
+        store.Save(new AutoPlay.Application.Settings.AppSettings
+        {
+            Theme = AutoPlay.Application.Settings.ThemePreference.Dark,
+            StopWithEscape = false,
+            QuickCaptureHotkey = "Ctrl+Alt+F10",
+            DataFolder = @"D:\AutoPlay",
+        });
+
+        Assert.Empty(JsonSchemas.Validate(JsonSchemas.Settings, File.ReadAllText(Path.Combine(_root, "settings.json"))));
+        var loaded = store.Load();
+        Assert.Equal(AutoPlay.Application.Settings.ThemePreference.Dark, loaded.Theme);
+        Assert.False(loaded.StopWithEscape);
+        Assert.Equal("Ctrl+Alt+F10", loaded.QuickCaptureHotkey);
+        Assert.Equal(@"D:\AutoPlay", loaded.DataFolder);
+    }
+
+    [Fact]
+    public void Corrupted_settings_are_a_persistence_error()
+    {
+        var path = Path.Combine(_root, "settings.json");
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(path, "{ broken");
+
+        Assert.Throws<PersistenceException>(() => new JsonSettingsStore(path).Load());
+    }
+
     // ---- Content of the files
 
     [Fact]
@@ -142,6 +174,7 @@ public sealed class FileFormatTests : IDisposable
     [InlineData("profile")]
     [InlineData("screen")]
     [InlineData("sequence")]
+    [InlineData("settings")]
     public void Schemas_target_the_current_version(string name)
     {
         var schema = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "schemas", $"{name}.schema.json")))!;

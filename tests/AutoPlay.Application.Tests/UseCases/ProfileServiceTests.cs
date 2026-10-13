@@ -80,6 +80,20 @@ public class ProfileServiceTests
     }
 
     [Fact]
+    public void UpdateDefaults_validates_and_saves()
+    {
+        var profile = _service.CreateProfile("Game").Value!;
+
+        var invalid = _service.UpdateDefaults(profile, new ProfileDefaults { MatchThreshold = 2, RetryIntervalMs = 0 });
+        Assert.Equal(["The match threshold must be between 0 and 1.", "The retry interval must be at least 1 ms."], invalid.Errors);
+        Assert.Equal(0.8, profile.Defaults.MatchThreshold);
+
+        var valid = _service.UpdateDefaults(profile, new ProfileDefaults { MatchThreshold = 0.9 });
+        Assert.True(valid.Succeeded);
+        Assert.Equal(0.9, Assert.Single(_repository.Profiles).Defaults.MatchThreshold);
+    }
+
+    [Fact]
     public void DeleteProfile_removes_it()
     {
         var profile = _service.CreateProfile("Game").Value!;

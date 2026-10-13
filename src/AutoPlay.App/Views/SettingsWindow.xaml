@@ -1,0 +1,123 @@
+<Window x:Class="AutoPlay.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
+        Title="AutoPlay — Settings" Width="640" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+        <Style x:Key="Number" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Width" Value="90" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Margin" Value="0,3" />
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="20">
+        <!-- Application -->
+        <TextBlock Style="{StaticResource SectionTitle}" Text="Application" />
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Theme" Style="{StaticResource Label}" />
+            <ComboBox Grid.Column="1" Width="160" HorizontalAlignment="Left" Margin="0,3"
+                      ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" ToolTip="System follows the Windows light or dark mode" />
+
+            <TextBlock Grid.Row="1" Text="Stop a run" Style="{StaticResource Label}" />
+            <CheckBox Grid.Row="1" Grid.Column="1" Margin="0,6" IsChecked="{Binding StopWithEscape}"
+                      Content="with Esc (F12 always stops a run)" />
+
+            <TextBlock Grid.Row="2" Text="Quick capture" Style="{StaticResource Label}" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+                <CheckBox VerticalAlignment="Center" IsChecked="{Binding QuickCaptureEnabled}" Content="Enabled, shortcut:" Margin="0,0,8,0" />
+                <TextBox x:Name="HotkeyBox" Width="170" IsReadOnly="True" IsEnabled="{Binding QuickCaptureEnabled}"
+                         Text="{Binding QuickCaptureHotkey}" PreviewKeyDown="OnHotkeyPreviewKeyDown"
+                         ToolTip="Click here, then press the key combination (e.g. Ctrl+Shift+F9)" />
+            </StackPanel>
+            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource HintText}" Margin="0,0,0,6"
+                       Text="Captures the screen of the selected profile, on its last framed area, without leaving the game. The captures wait in the main window until you annotate them." />
+
+            <TextBlock Grid.Row="4" Text="Data folder" Style="{StaticResource Label}" />
+            <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,3">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Default" Margin="8,0,0,0" MinWidth="0" Command="{Binding UseDefaultDataFolderCommand}" />
+                    <Button DockPanel.Dock="Right" Content="Browse…" Margin="8,0,0,0" MinWidth="0" Command="{Binding BrowseDataFolderCommand}" />
+                    <TextBox Text="{Binding DataFolder, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+                <TextBlock Style="{StaticResource HintText}" Margin="0,4,0,0">
+                    <Run Text="Empty = default folder:" />
+                    <Run Text="{Binding DefaultDataFolder, Mode=OneWay}" />
+                    <Run Text="· Used at the next start." />
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+
+        <!-- Profile defaults -->
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding ProfileTitle}" />
+        <Grid IsEnabled="{Binding HasProfile}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Match threshold" Style="{StaticResource Label}" />
+            <TextBox Grid.Column="1" Style="{StaticResource Number}" Text="{Binding MatchThresholdText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Grid.Column="2" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="0 to 1: minimum similarity to click (locations can override it)" />
+
+            <TextBlock Grid.Row="1" Text="Verification timeout (ms)" Style="{StaticResource Label}" />
+            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource Number}" Text="{Binding VerificationTimeoutText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="Maximum wait for a location to appear" />
+
+            <TextBlock Grid.Row="2" Text="Retry interval (ms)" Style="{StaticResource Label}" />
+            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource Number}" Text="{Binding RetryIntervalText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="Time between two searches" />
+
+            <TextBlock Grid.Row="3" Text="Search margin (%)" Style="{StaticResource Label}" />
+            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource Number}" Text="{Binding SearchMarginText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="How far around its position a location is searched" />
+
+            <TextBlock Grid.Row="4" Text="Mouse tolerance (px)" Style="{StaticResource Label}" />
+            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource Number}" Text="{Binding TakeoverToleranceText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Grid.Row="4" Grid.Column="2" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="Mouse moves beyond this distance pause the run" />
+        </Grid>
+        <Button HorizontalAlignment="Left" Margin="0,8,0,0" Content="Reset to defaults" Command="{Binding ResetDefaultsCommand}"
+                IsEnabled="{Binding HasProfile}" />
+
+        <TextBlock Margin="0,12,0,0" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" Text="{Binding ErrorMessage}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Save" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" IsDefault="True" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" Margin="0" />
+        </StackPanel>
+    </StackPanel>
+</Window>

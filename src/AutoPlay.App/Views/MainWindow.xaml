@@ -14,6 +14,8 @@
                 <MenuItem Header="_Export profile…" Command="{Binding ExportProfileCommand}"
                           ToolTip="Save the selected profile (screens, images, sequences) as a .zip file, for backup or sharing" />
                 <Separator />
+                <MenuItem Header="_Settings…" Command="{Binding OpenSettingsCommand}" />
+                <Separator />
                 <MenuItem Header="Open _data folder" Command="{Binding OpenDataFolderCommand}" />
                 <MenuItem Header="Open _logs folder" Command="{Binding OpenLogsFolderCommand}" />
                 <Separator />
@@ -71,7 +73,7 @@
                             <DataTemplate>
                                 <TextBlock>
                                     <Run Text="{Binding Name, Mode=OneWay}" />
-                                    <Run Foreground="Gray" Text="{Binding Locations.Count, Mode=OneWay, StringFormat='({0} locations)'}" />
+                                    <Run Foreground="{StaticResource HintBrush}" Text="{Binding Locations.Count, Mode=OneWay, StringFormat='({0} locations)'}" />
                                 </TextBlock>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -96,7 +98,7 @@
                             <DataTemplate>
                                 <TextBlock>
                                     <Run Text="{Binding Name, Mode=OneWay}" />
-                                    <Run Foreground="Gray" Text="{Binding Steps.Count, Mode=OneWay, StringFormat='({0} steps)'}" />
+                                    <Run Foreground="{StaticResource HintBrush}" Text="{Binding Steps.Count, Mode=OneWay, StringFormat='({0} steps)'}" />
                                 </TextBlock>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

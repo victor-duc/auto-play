@@ -17,8 +17,18 @@ public sealed partial class MainViewModel(
     IUserDialogs dialogs,
     IShellLauncher shell,
     AppPaths paths,
-    RunScheduler? scheduler = null) : ObservableObject
+    RunScheduler? scheduler = null,
+    ISettingsFlow? settingsFlow = null) : ObservableObject
 {
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        if (settingsFlow?.Open(SelectedProfile) == true)
+        {
+            StatusMessage = "Settings saved.";
+        }
+    }
+
     /// <summary>Shows the scheduler messages in the status bar.</summary>
     public void AttachScheduler()
     {

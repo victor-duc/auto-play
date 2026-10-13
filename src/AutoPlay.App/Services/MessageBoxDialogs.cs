@@ -14,6 +14,14 @@ public sealed class MessageBoxDialogs : IUserDialogs
     public void ShowInformation(string message) =>
         Show(message, "AutoPlay", MessageBoxButton.OK, MessageBoxImage.Information);
 
+    public string? AskFolderPath(string title)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = title };
+        return dialog.ShowDialog(System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)) == true
+            ? dialog.FolderName
+            : null;
+    }
+
     public string? AskSaveFilePath(string title, string defaultFileName, string filter)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Title = title, FileName = defaultFileName, Filter = filter, AddExtension = true };

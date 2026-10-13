@@ -21,12 +21,12 @@
 
         <StackPanel>
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding ElapsedText}" Foreground="Gray" VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding ElapsedText}" Foreground="{StaticResource HintBrush}" VerticalAlignment="Center" />
                 <TextBlock x:Name="StateLabel" Text="{Binding StateText}" FontSize="14" FontWeight="SemiBold" />
             </DockPanel>
             <TextBlock Margin="0,6,0,0" Text="{Binding IterationText}" />
             <TextBlock Margin="0,2,0,0" Text="{Binding StepText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding StepText}" />
-            <TextBlock Margin="0,2,0,0" Text="{Binding ScoreText}" Foreground="Gray" />
+            <TextBlock Margin="0,2,0,0" Text="{Binding ScoreText}" Foreground="{StaticResource HintBrush}" />
             <TextBlock Margin="0,6,0,0" Text="{Binding Message}" TextWrapping="Wrap" />
         </StackPanel>
     </DockPanel>
@@ -35,10 +35,10 @@
         <Style TargetType="Window">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding State}" Value="Failed">
-                    <Setter Property="Background" Value="#FFFDECEA" />
+                    <Setter Property="Background" Value="{StaticResource ErrorTintBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Completed">
-                    <Setter Property="Background" Value="#FFEAF6EC" />
+                    <Setter Property="Background" Value="{StaticResource SuccessTintBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

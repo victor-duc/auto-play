@@ -7,6 +7,8 @@
     <AssemblyName>AutoPlay</AssemblyName>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WPF0001: the Fluent theme (ThemeMode) is flagged as experimental by the WPF team. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

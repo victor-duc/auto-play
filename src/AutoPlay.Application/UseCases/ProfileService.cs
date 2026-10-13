@@ -63,6 +63,30 @@ public sealed class ProfileService(
         }
     }
 
+    /// <summary>Validates and saves the default execution settings of a profile.</summary>
+    public OperationResult UpdateDefaults(Profile profile, ProfileDefaults defaults)
+    {
+        var errors = defaults.Validate();
+        if (errors.Count > 0)
+        {
+            return OperationResult.Failure(errors);
+        }
+
+        var previous = profile.Defaults;
+        profile.Defaults = defaults;
+        try
+        {
+            profiles.SaveProfile(profile);
+            return OperationResult.Success();
+        }
+        catch (PersistenceException ex)
+        {
+            profile.Defaults = previous;
+            UseCaseLog.StorageError(_logger, ex);
+            return OperationResult.Failure(ex.Message);
+        }
+    }
+
     /// <summary>Deletes the profile with all its screens and sequences.</summary>
     public void DeleteProfile(Guid profileId) => profiles.DeleteProfile(profileId);
 

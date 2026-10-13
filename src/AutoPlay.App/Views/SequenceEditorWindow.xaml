@@ -11,7 +11,7 @@
         PreviewKeyDown="OnPreviewKeyDown" Closing="OnClosing">
     <Window.Resources>
         <Style x:Key="ErrorText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="Firebrick" />
+            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
             <Style.Triggers>
                 <Trigger Property="Text" Value="">
@@ -34,8 +34,8 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1"
-                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource PanelBrush}">
             <StackPanel>
                 <WrapPanel>
                     <TextBlock Text="Sequence name" Style="{StaticResource FieldLabel}" />
@@ -44,7 +44,7 @@
                     <TextBlock Text="Repeat" Style="{StaticResource FieldLabel}" />
                     <TextBox Style="{StaticResource NumberBox}" Text="{Binding RepeatCountText, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Number of times the steps are executed; 0 = until stopped" />
-                    <TextBlock Text="time(s) — 0 = until stopped" Foreground="Gray" Style="{StaticResource FieldLabel}" Margin="6,0,20,0" />
+                    <TextBlock Text="time(s) — 0 = until stopped" Foreground="{StaticResource HintBrush}" Style="{StaticResource FieldLabel}" Margin="6,0,20,0" />
                     <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True" ToolTip="Save (Enter)" />
                     <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
                 </WrapPanel>
@@ -65,20 +65,20 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Text="(no day checked = every day)" Foreground="Gray" VerticalAlignment="Center" />
+                    <TextBlock Text="(no day checked = every day)" Foreground="{StaticResource HintBrush}" VerticalAlignment="Center" />
                 </WrapPanel>
                 <TextBlock Margin="0,6,0,0" Style="{StaticResource ErrorText}" Text="{Binding ErrorMessage}" />
             </StackPanel>
         </Border>
 
         <!-- Add a step -->
-        <Border DockPanel.Dock="Right" Width="320" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
+        <Border DockPanel.Dock="Right" Width="320" Padding="12" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Text="Add a step" />
-                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4" Text="Screen" Foreground="Gray" />
+                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4" Text="Screen" Foreground="{StaticResource HintBrush}" />
                 <ComboBox x:Name="ScreenComboBox" DockPanel.Dock="Top" ItemsSource="{Binding ScreenChoices}" SelectedItem="{Binding SelectedScreenChoice}"
                           DisplayMemberPath="Name" IsEnabled="{Binding HasScreens}" />
-                <TextBlock DockPanel.Dock="Top" Margin="0,8,0,4" Text="Location" Foreground="Gray" />
+                <TextBlock DockPanel.Dock="Top" Margin="0,8,0,4" Text="Location" Foreground="{StaticResource HintBrush}" />
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
                     <TextBlock Style="{StaticResource SectionTitle}" Text="Run another sequence" />
                     <DockPanel>
@@ -87,7 +87,7 @@
                         <ComboBox ItemsSource="{Binding SequenceChoices}" SelectedItem="{Binding SelectedSequenceChoice}"
                                   DisplayMemberPath="Name" IsEnabled="{Binding HasOtherSequences}" />
                     </DockPanel>
-                    <TextBlock Margin="0,4,0,0" Foreground="Gray" TextWrapping="Wrap"
+                    <TextBlock Margin="0,4,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
                                Text="The other sequence runs all its steps, as many times as its repeat count, then this one continues." />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
@@ -97,9 +97,9 @@
                         <Button Content="Add wait" Command="{Binding AddWaitCommand}" Margin="0"
                                 ToolTip="Insert a pause of 1 second (adjustable) after the selected step" />
                     </StackPanel>
-                    <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
+                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
                                Text="The step is inserted after the selected step, or at the end if no step is selected." />
-                    <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap"
+                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
                                Text="This profile has no screen yet: record a screen first."
                                Visibility="{Binding HasScreens, Converter={StaticResource InverseBooleanToVisibility}}" />
                 </StackPanel>
@@ -108,7 +108,7 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:LocationChoice}">
                             <StackPanel Orientation="Horizontal" Margin="0,3">
-                                <Border Width="72" Height="40" Margin="0,0,8,0" Background="#11000000">
+                                <Border Width="72" Height="40" Margin="0,0,8,0" Background="{StaticResource ThumbnailBrush}">
                                     <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
                                 </Border>
                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
@@ -184,7 +184,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
-                            <Border Grid.Column="1" Width="72" Height="40" Margin="0,0,10,0" Background="#11000000">
+                            <Border Grid.Column="1" Width="72" Height="40" Margin="0,0,10,0" Background="{StaticResource ThumbnailBrush}">
                                 <Grid>
                                     <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
                                     <TextBlock Text="⏱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -195,12 +195,12 @@
                             </Border>
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="StepTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Summary}" Foreground="Gray" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Summary}" Foreground="{StaticResource HintBrush}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Grid>
                         <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                <Setter TargetName="StepTitle" Property="Foreground" Value="Firebrick" />
+                                <Setter TargetName="StepTitle" Property="Foreground" Value="{StaticResource ErrorBrush}" />
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>

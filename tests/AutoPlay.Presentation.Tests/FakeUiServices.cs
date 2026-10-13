@@ -27,6 +27,10 @@ internal sealed class FakeDialogs : IUserDialogs
 
     public void ShowInformation(string message) => Informations.Add(message);
 
+    public string? FolderPath { get; set; }
+
+    public string? AskFolderPath(string title) => FolderPath;
+
     public string? AskSaveFilePath(string title, string defaultFileName, string filter)
     {
         SaveFileNames.Add(defaultFileName);

@@ -9,6 +9,7 @@ using AutoPlay.Adapters.Persistence;
 using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Application.Execution;
+using AutoPlay.Application.Settings;
 using AutoPlay.Adapters.Vision;
 using AutoPlay.Adapters.Windows.Capture;
 using AutoPlay.Adapters.Windows.Input;
@@ -45,8 +46,13 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        var paths = AppPaths.Default;
-        _services = ConfigureServices(paths).BuildServiceProvider();
+        // The settings are read first: they choose the data folder and the theme.
+        var settingsService = new SettingsService(new JsonSettingsStore(Path.Combine(AppPaths.DefaultRoot, "settings.json")));
+        var paths = new AppPaths(AppPaths.DefaultRoot, settingsService.Current.DataFolder);
+        ApplyTheme(settingsService.Current.Theme);
+        settingsService.Changed += (_, settings) => ApplyTheme(settings.Theme);
+
+        _services = ConfigureServices(paths, settingsService).BuildServiceProvider();
         _logger = _services.GetRequiredService<ILoggerFactory>().CreateLogger("AutoPlay");
         var version = typeof(App).Assembly.GetName().Version?.ToString() ?? "?";
         AppLog.Started(_logger, version, paths.Root);
@@ -79,7 +85,7 @@ public partial class App : System.Windows.Application
         base.OnExit(e);
     }
 
-    private static ServiceCollection ConfigureServices(AppPaths paths)
+    private static ServiceCollection ConfigureServices(AppPaths paths, SettingsService settingsService)
     {
         var services = new ServiceCollection();
 
@@ -97,6 +103,7 @@ public partial class App : System.Windows.Application
             .CreateLogger();
         services.AddLogging(builder => builder.AddSerilog(fileLogger, dispose: true));
         services.AddSingleton(paths);
+        services.AddSingleton(settingsService);
         services.AddSingleton<IShellLauncher, ShellLauncher>();
 
         // Driven adapters (implement the application ports)
@@ -130,6 +137,7 @@ public partial class App : System.Windows.Application
             sp.GetRequiredService<ActivityTracker>(),
             () => DateTime.Now));
         services.AddSingleton<IScreenRecordingFlow, ScreenRecordingFlow>();
+        services.AddSingleton<ISettingsFlow, SettingsFlow>();
         services.AddSingleton<ISequenceEditingFlow, SequenceEditingFlow>();
         services.AddSingleton<ISequenceExecutionFlow, SequenceExecutionFlow>();
         services.AddSingleton<MainViewModel>();
@@ -137,6 +145,15 @@ public partial class App : System.Windows.Application
 
         return services;
     }
+
+#pragma warning disable WPF0001 // The Fluent theme is flagged as experimental.
+    private void ApplyTheme(ThemePreference theme) => ThemeMode = theme switch
+    {
+        ThemePreference.Light => ThemeMode.Light,
+        ThemePreference.Dark => ThemeMode.Dark,
+        _ => ThemeMode.System,
+    };
+#pragma warning restore WPF0001
 
     /// <summary>Checks the scheduled sequences every 10 seconds while AutoPlay is running.</summary>
     private void StartScheduler()

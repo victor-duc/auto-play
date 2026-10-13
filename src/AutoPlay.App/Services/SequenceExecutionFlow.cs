@@ -1,5 +1,6 @@
 using AutoPlay.App.Views;
 using AutoPlay.Application.Execution;
+using AutoPlay.Application.Settings;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 using AutoPlay.Presentation.Services;
@@ -15,6 +16,7 @@ public sealed class SequenceExecutionFlow(
     IUserDialogs dialogs,
     IShellLauncher shell,
     ActivityTracker activity,
+    SettingsService settings,
     IServiceProvider services) : ISequenceExecutionFlow
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before the first capture.</summary>
@@ -76,7 +78,7 @@ public sealed class SequenceExecutionFlow(
             {
                 StartPosition = start,
             };
-            new RunStatusWindow(viewModel, region.Value).ShowDialog();
+            new RunStatusWindow(viewModel, region.Value, settings.Current.StopWithEscape).ShowDialog();
             return true;
         }
         finally

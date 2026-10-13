@@ -17,8 +17,8 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1"
-                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource PanelBrush}">
             <StackPanel>
                 <WrapPanel>
                     <TextBlock Text="Screen name" VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -33,9 +33,9 @@
                     <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True" ToolTip="Save (Enter)" />
                     <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
                 </WrapPanel>
-                <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
                            Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Ctrl+drag to redraw the selected location · Shift+click inside the selected location to set its click point · Delete removes the selected location" />
-                <TextBlock Margin="0,6,0,0" Foreground="SteelBlue" TextWrapping="Wrap" Text="{Binding InfoMessage}">
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource InfoBrush}" TextWrapping="Wrap" Text="{Binding InfoMessage}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
@@ -46,7 +46,7 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap" Text="{Binding ErrorMessage}">
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" Text="{Binding ErrorMessage}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
@@ -64,7 +64,7 @@
         </Border>
 
         <!-- Locations panel -->
-        <Border DockPanel.Dock="Right" Width="380" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
+        <Border DockPanel.Dock="Right" Width="380" Padding="12" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}"
                            Text="{Binding Locations.Count, StringFormat='Locations ({0})'}" />
@@ -75,11 +75,11 @@
                         <ColumnDefinition Width="50" />
                         <ColumnDefinition Width="28" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Name" Foreground="Gray" />
-                    <TextBlock Grid.Column="1" Text="Threshold" Foreground="Gray" Margin="6,0,0,0" />
-                    <TextBlock Grid.Column="2" Text="Colors" Foreground="Gray" HorizontalAlignment="Center" />
+                    <TextBlock Text="Name" Foreground="{StaticResource HintBrush}" />
+                    <TextBlock Grid.Column="1" Text="Threshold" Foreground="{StaticResource HintBrush}" Margin="6,0,0,0" />
+                    <TextBlock Grid.Column="2" Text="Colors" Foreground="{StaticResource HintBrush}" HorizontalAlignment="Center" />
                 </Grid>
-                <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
+                <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
                            Text="Threshold: minimum similarity, from 0 to 1, required to click the location. Leave empty to use the profile default (0.8). Colors: also compare colors, not only shapes (e.g. to tell an enabled button from a greyed-out one)." />
                 <ListBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SelectedLocation}"
                          HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

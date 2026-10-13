@@ -25,8 +25,12 @@ public partial class RunStatusWindow : Window
     private readonly List<GlobalHotkey> _stopHotkeys = [];
     private bool _started;
 
-    public RunStatusWindow(RunStatusViewModel viewModel, PixelRect targetRegion)
+    private readonly bool _stopWithEscape;
+
+    /// <param name="stopWithEscape">Whether Esc stops the run, in addition to F12.</param>
+    public RunStatusWindow(RunStatusViewModel viewModel, PixelRect targetRegion, bool stopWithEscape)
     {
+        _stopWithEscape = stopWithEscape;
         InitializeComponent();
         _viewModel = viewModel;
         _targetRegion = targetRegion;
@@ -49,7 +53,8 @@ public partial class RunStatusWindow : Window
         HwndSource.FromHwnd(handle)?.AddHook(WndProc);
         // While a run is active, Esc and F12 stop it from any window. They are released when this window closes.
         var unavailable = new List<string>();
-        foreach (var (key, name) in new[] { (VirtualKeyEscape, "Esc"), (VirtualKeyF12, "F12") })
+        var keys = _stopWithEscape ? new[] { (VirtualKeyEscape, "Esc"), (VirtualKeyF12, "F12") } : new[] { (VirtualKeyF12, "F12") };
+        foreach (var (key, name) in keys)
         {
             try
             {

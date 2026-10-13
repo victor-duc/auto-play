@@ -12,4 +12,7 @@ public interface IUserDialogs
     /// <summary>Asks where to save a file; returns the chosen path, or null if cancelled.</summary>
     /// <param name="filter">File types, e.g. "Zip archive (*.zip)|*.zip".</param>
     string? AskSaveFilePath(string title, string defaultFileName, string filter);
+
+    /// <summary>Asks for a folder; returns its path, or null if cancelled.</summary>
+    string? AskFolderPath(string title);
 }

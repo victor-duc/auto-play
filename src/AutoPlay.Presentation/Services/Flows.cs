@@ -18,6 +18,14 @@ public interface IScreenRecordingFlow
     Task<bool> RecaptureAsync(Profile profile, Screen screen);
 }
 
+/// <summary>Opens the settings window.</summary>
+public interface ISettingsFlow
+{
+    /// <summary>Returns true if the settings were saved.</summary>
+    /// <param name="profile">The selected profile, whose defaults can be edited; null if none.</param>
+    bool Open(Profile? profile);
+}
+
 /// <summary>Opens the sequence editor.</summary>
 public interface ISequenceEditingFlow
 {
