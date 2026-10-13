@@ -1,9 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.Windows.Media.Imaging;
-using AutoPlay.App.Imaging;
-using AutoPlay.App.Services;
+using AutoPlay.Presentation.Services;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
@@ -12,7 +10,7 @@ using AutoPlay.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 /// <summary>Edits the locations of a screen on its frozen capture, for a new or an existing screen.</summary>
 public sealed partial class ScreenEditorViewModel : ObservableObject
@@ -37,7 +35,6 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
         _capture = capture;
         _screenId = existingScreen?.Id ?? Guid.NewGuid();
 
-        CaptureBitmap = capture.ToBitmapSource();
         var defaultDelay = existingScreen?.DefaultDelay ?? new Screen { Name = string.Empty }.DefaultDelay;
         ScreenName = existingScreen?.Name ?? string.Empty;
         DelayMinMs = defaultDelay.MinMs.ToString(CultureInfo.CurrentCulture);
@@ -60,7 +57,8 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
 
     public string Title { get; }
 
-    public BitmapSource CaptureBitmap { get; }
+    /// <summary>The frozen capture the locations are drawn on.</summary>
+    public RawImage Capture => _capture;
 
     public PixelSize CaptureSize => _capture.Size;
 

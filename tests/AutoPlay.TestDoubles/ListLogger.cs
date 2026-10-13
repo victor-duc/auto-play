@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 
-namespace AutoPlay.Application.Tests.Fakes;
+namespace AutoPlay.TestDoubles;
 
 /// <summary>A logger that keeps the formatted messages in memory.</summary>
-internal sealed class ListLogger<T> : ILogger<T>
+public sealed class ListLogger<T> : ILogger<T>
 {
     public List<(LogLevel Level, string Message)> Entries { get; } = [];
 

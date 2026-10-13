@@ -7,6 +7,7 @@
         <converters:NotNullToBooleanConverter x:Key="NotNullToBoolean" />
         <converters:AllTrueConverter x:Key="AllTrue" />
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibility" />
+        <converters:RawImageToBitmapConverter x:Key="RawImageToBitmap" />
         <Style TargetType="Button">
             <Setter Property="Padding" Value="12,4" />
             <Setter Property="Margin" Value="0,0,8,0" />

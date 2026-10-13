@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AutoPlay.App.ViewModels"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:SequenceEditorViewModel}"
         Title="{Binding Title}" Width="1100" Height="720" MinWidth="820" MinHeight="500"
@@ -75,7 +75,7 @@
                         <DataTemplate DataType="{x:Type vm:LocationChoice}">
                             <StackPanel Orientation="Horizontal" Margin="0,3">
                                 <Border Width="72" Height="40" Margin="0,0,8,0" Background="#11000000">
-                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                    <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
                                 </Border>
                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
@@ -142,7 +142,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                             <Border Grid.Column="1" Width="72" Height="40" Margin="0,0,10,0" Background="#11000000">
-                                <Image Source="{Binding Thumbnail}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
                             </Border>
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="StepTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />

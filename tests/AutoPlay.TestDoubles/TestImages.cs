@@ -1,8 +1,8 @@
 using AutoPlay.Domain.Imaging;
 
-namespace AutoPlay.Application.Tests.Fakes;
+namespace AutoPlay.TestDoubles;
 
-internal static class TestImages
+public static class TestImages
 {
     /// <summary>Creates an image where each pixel's blue channel encodes its position, so crops can be checked.</summary>
     public static RawImage Gradient(int width, int height)

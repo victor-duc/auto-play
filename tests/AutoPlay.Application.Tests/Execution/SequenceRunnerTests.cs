@@ -3,7 +3,7 @@ using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
-using AutoPlay.Application.Tests.Fakes;
+using AutoPlay.TestDoubles;
 
 namespace AutoPlay.Application.Tests.Execution;
 

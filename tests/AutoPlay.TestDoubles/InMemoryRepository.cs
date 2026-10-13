@@ -2,10 +2,10 @@ using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 
-namespace AutoPlay.Application.Tests.Fakes;
+namespace AutoPlay.TestDoubles;
 
 /// <summary>In-memory implementation of the persistence ports.</summary>
-internal sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore
+public sealed class InMemoryRepository : IProfileRepository, IScreenRepository, ISequenceRepository, IRunLogStore
 {
     public List<Profile> Profiles { get; } = [];
 

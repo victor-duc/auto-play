@@ -2,15 +2,15 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using AutoPlay.App.Imaging;
-using AutoPlay.App.Services;
+using AutoPlay.Presentation.Services;
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 /// <summary>Creates or edits a sequence of a profile.</summary>
 public sealed partial class SequenceEditorViewModel : ObservableObject
@@ -252,11 +252,11 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     private LocationChoice? FindChoice(SequenceStep step) =>
         ScreenChoices.FirstOrDefault(s => s.Screen.Id == step.ScreenId)?.Locations.FirstOrDefault(l => l.Location.Id == step.LocationId);
 
-    private System.Windows.Media.Imaging.BitmapSource? LoadThumbnail(Screen screen, Location location)
+    private RawImage? LoadThumbnail(Screen screen, Location location)
     {
         try
         {
-            return _screenService.GetTemplate(_profile.Id, screen.Id, location.Id).ToBitmapSource();
+            return _screenService.GetTemplate(_profile.Id, screen.Id, location.Id);
         }
         catch (PersistenceException)
         {

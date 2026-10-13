@@ -1,15 +1,15 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.Windows.Threading;
 using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
 using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
+using AutoPlay.Presentation.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 public enum RunState
 {
@@ -21,6 +21,7 @@ public enum RunState
 }
 
 /// <summary>Runs a sequence and exposes its progress, with stop, resume and close actions.</summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001", Justification = "The timer only exists during a run and is disposed when the run ends.")]
 public sealed partial class RunStatusViewModel : ObservableObject
 {
     private readonly SequenceRunner _runner;
@@ -30,7 +31,9 @@ public sealed partial class RunStatusViewModel : ObservableObject
     private readonly IReadOnlyDictionary<Guid, ScreenAssets> _screens;
     private readonly PixelRect _targetRegion;
     private readonly Stopwatch _elapsed = new();
-    private readonly DispatcherTimer _timer;
+    private readonly IShellLauncher _shell;
+    private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
+    private Timer? _timer;
     private CancellationTokenSource? _cancellation;
     private RunPosition _position;
     private bool _canResume;
@@ -41,7 +44,8 @@ public sealed partial class RunStatusViewModel : ObservableObject
         Profile profile,
         Sequence sequence,
         IReadOnlyDictionary<Guid, ScreenAssets> screens,
-        PixelRect targetRegion)
+        PixelRect targetRegion,
+        IShellLauncher shell)
     {
         _runner = runner;
         _executionService = executionService;
@@ -49,8 +53,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
         _sequence = sequence;
         _screens = screens;
         _targetRegion = targetRegion;
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) => OnPropertyChanged(nameof(ElapsedText));
+        _shell = shell;
         StepText = $"{sequence.Steps.Count} step(s)";
     }
 
@@ -121,7 +124,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
     {
         if (LogImagePath is not null)
         {
-            Process.Start(new ProcessStartInfo(LogImagePath) { UseShellExecute = true });
+            _shell.Open(LogImagePath);
         }
     }
 
@@ -134,7 +137,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
         ScoreText = null;
         State = RunState.Running;
         _elapsed.Start();
-        _timer.Start();
+        _timer = new Timer(_ => RaiseOnUiThread(nameof(ElapsedText)), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
 
         RunResult result;
         try
@@ -155,12 +158,25 @@ public sealed partial class RunStatusViewModel : ObservableObject
         finally
         {
             _elapsed.Stop();
-            _timer.Stop();
+            await _timer.DisposeAsync();
+            _timer = null;
             _cancellation = null;
             OnPropertyChanged(nameof(ElapsedText));
         }
 
         HandleResult(result);
+    }
+
+    private void RaiseOnUiThread(string propertyName)
+    {
+        if (_uiContext is null)
+        {
+            OnPropertyChanged(propertyName);
+        }
+        else
+        {
+            _uiContext.Post(_ => OnPropertyChanged(propertyName), null);
+        }
     }
 
     private void OnProgress(RunProgress progress)

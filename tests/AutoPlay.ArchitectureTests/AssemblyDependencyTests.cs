@@ -3,6 +3,7 @@ using AutoPlay.Adapters.Persistence;
 using AutoPlay.Adapters.Vision;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
+using AutoPlay.Presentation.ViewModels;
 
 namespace AutoPlay.ArchitectureTests;
 
@@ -13,6 +14,7 @@ public class AssemblyDependencyTests
     private static readonly Assembly Application = typeof(ProfileService).Assembly;
     private static readonly Assembly Persistence = typeof(FileProfileStore).Assembly;
     private static readonly Assembly Vision = typeof(OpenCvTemplateMatcher).Assembly;
+    private static readonly Assembly Presentation = typeof(MainViewModel).Assembly;
 
     [Fact]
     public void Domain_uses_only_the_base_library()
@@ -28,6 +30,17 @@ public class AssemblyDependencyTests
             name => Assert.True(
                 IsBaseLibrary(name) || name is "AutoPlay.Domain" or "Microsoft.Extensions.Logging.Abstractions",
                 $"The application uses {name}."));
+    }
+
+    [Fact]
+    public void Presentation_does_not_use_wpf_nor_adapters()
+    {
+        Assert.All(
+            ReferencedNames(Presentation),
+            name => Assert.True(
+                IsBaseLibrary(name) || name is "AutoPlay.Domain" or "AutoPlay.Application" or "CommunityToolkit.Mvvm"
+                    or "Microsoft.Extensions.Logging.Abstractions",
+                $"The presentation uses {name}."));
     }
 
     [Theory]

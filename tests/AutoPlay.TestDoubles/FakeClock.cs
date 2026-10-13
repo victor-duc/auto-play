@@ -1,9 +1,9 @@
 using AutoPlay.Application.Ports;
 
-namespace AutoPlay.Application.Tests.Fakes;
+namespace AutoPlay.TestDoubles;
 
 /// <summary>A clock whose delays complete immediately and advance the current time.</summary>
-internal sealed class FakeClock : IClock
+public sealed class FakeClock : IClock
 {
     public DateTimeOffset UtcNow { get; private set; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 

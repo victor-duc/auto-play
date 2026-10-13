@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AutoPlay.App.ViewModels"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:ScreenEditorViewModel}"
         Title="{Binding Title}" Width="1200" Height="800" MinWidth="800" MinHeight="500"
@@ -105,7 +105,7 @@
         <Grid Background="#FF2B2B2B" ClipToBounds="True">
             <Viewbox x:Name="CaptureViewbox" Margin="16" Stretch="Uniform" StretchDirection="DownOnly" SizeChanged="OnViewboxSizeChanged">
                 <Grid x:Name="Surface" Width="{Binding PixelWidth}" Height="{Binding PixelHeight}">
-                    <Image Source="{Binding CaptureBitmap}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image Source="{Binding Capture, Converter={StaticResource RawImageToBitmap}}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
 
                     <ItemsControl ItemsSource="{Binding Locations}" IsHitTestVisible="False">
                         <ItemsControl.ItemsPanel>

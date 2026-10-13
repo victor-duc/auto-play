@@ -3,7 +3,7 @@ using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Recording;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 /// <summary>A location being edited on a capture, in capture pixel coordinates.</summary>
 public sealed partial class LocationViewModel : ObservableObject

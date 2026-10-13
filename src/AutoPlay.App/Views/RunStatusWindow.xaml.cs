@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Interop;
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.ViewModels;
 using AutoPlay.Application.Execution;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Adapters.Windows.Hotkeys;

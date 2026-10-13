@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AutoPlay.Application\AutoPlay.Application.csproj" />
+    <ProjectReference Include="..\AutoPlay.TestDoubles\AutoPlay.TestDoubles.csproj" />
   </ItemGroup>
 
   <ItemGroup>

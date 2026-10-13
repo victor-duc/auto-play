@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace AutoPlay.App.Services;
+namespace AutoPlay.Presentation.Services;
 
 /// <summary>Folders used by the application, under %LOCALAPPDATA%\AutoPlay.</summary>
 public sealed class AppPaths

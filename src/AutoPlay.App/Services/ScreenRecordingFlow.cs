@@ -1,13 +1,14 @@
 using System.Windows;
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.ViewModels;
 using AutoPlay.App.Views;
+using AutoPlay.Presentation.Services;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 
 namespace AutoPlay.App.Services;
 
 /// <summary>Orchestrates the recording of a new screen (framing, capture, annotation) and the editing of an existing one.</summary>
-public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialogs dialogs)
+public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialogs dialogs) : IScreenRecordingFlow
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before capturing.</summary>
     private static readonly TimeSpan CaptureDelay = TimeSpan.FromMilliseconds(300);

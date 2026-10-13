@@ -1,5 +1,5 @@
 using AutoPlay.Application.Ports;
-using AutoPlay.Application.Tests.Fakes;
+using AutoPlay.TestDoubles;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 

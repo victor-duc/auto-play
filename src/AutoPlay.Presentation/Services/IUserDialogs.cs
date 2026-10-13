@@ -1,4 +1,4 @@
-namespace AutoPlay.App.Services;
+namespace AutoPlay.Presentation.Services;
 
 /// <summary>Simple message boxes, abstracted so that view models do not depend on WPF windows.</summary>
 public interface IUserDialogs

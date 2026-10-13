@@ -1,5 +1,6 @@
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.ViewModels;
 using AutoPlay.App.Views;
+using AutoPlay.Presentation.Services;
 using AutoPlay.Application.Execution;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
@@ -12,7 +13,8 @@ public sealed class SequenceExecutionFlow(
     SequenceExecutionService executionService,
     ProfileService profileService,
     IUserDialogs dialogs,
-    IServiceProvider services)
+    IShellLauncher shell,
+    IServiceProvider services) : ISequenceExecutionFlow
 {
     /// <summary>Time given to the desktop compositor to remove the framing window before the first capture.</summary>
     private static readonly TimeSpan StartDelay = TimeSpan.FromMilliseconds(300);
@@ -43,7 +45,7 @@ public sealed class SequenceExecutionFlow(
             await Task.Delay(StartDelay);
 
             var viewModel = new RunStatusViewModel(
-                services.GetRequiredService<SequenceRunner>(), executionService, profile, sequence, screens, region);
+                services.GetRequiredService<SequenceRunner>(), executionService, profile, sequence, screens, region, shell);
             new RunStatusWindow(viewModel, region).ShowDialog();
         }
         finally

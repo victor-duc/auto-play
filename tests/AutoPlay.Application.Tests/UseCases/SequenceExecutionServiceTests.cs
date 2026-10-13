@@ -1,6 +1,6 @@
 using AutoPlay.Application.Execution;
 using AutoPlay.Application.Ports;
-using AutoPlay.Application.Tests.Fakes;
+using AutoPlay.TestDoubles;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;

@@ -1,19 +1,19 @@
 using System.Collections.ObjectModel;
-using AutoPlay.App.Services;
+using AutoPlay.Presentation.Services;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 public sealed partial class MainViewModel(
     ProfileService profileService,
     ScreenService screenService,
     SequenceService sequenceService,
-    ScreenRecordingFlow screenRecording,
-    SequenceEditingFlow sequenceEditing,
-    SequenceExecutionFlow sequenceExecution,
+    IScreenRecordingFlow screenRecording,
+    ISequenceEditingFlow sequenceEditing,
+    ISequenceExecutionFlow sequenceExecution,
     IUserDialogs dialogs,
     IShellLauncher shell,
     AppPaths paths) : ObservableObject

@@ -1,9 +1,9 @@
 using System.Globalization;
-using System.Windows.Media.Imaging;
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 /// <summary>A sequence step being edited. Override fields are kept as text until the sequence is saved.</summary>
 public sealed partial class StepViewModel : ObservableObject
@@ -35,7 +35,7 @@ public sealed partial class StepViewModel : ObservableObject
 
     public bool IsMissing => Target is null;
 
-    public BitmapSource? Thumbnail => Target?.Thumbnail;
+    public RawImage? Thumbnail => Target?.Thumbnail;
 
     public string Title => Target?.FullName ?? "Missing screen or location";
 

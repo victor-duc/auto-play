@@ -1,5 +1,5 @@
 using System.Windows;
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.ViewModels;
 
 namespace AutoPlay.App.Views;
 

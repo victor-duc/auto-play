@@ -2,7 +2,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using AutoPlay.App.Services;
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.Services;
+using AutoPlay.Presentation.ViewModels;
 using AutoPlay.App.Views;
 using AutoPlay.Adapters.Persistence;
 using AutoPlay.Application.Ports;
@@ -119,9 +120,9 @@ public partial class App : System.Windows.Application
 
         // Driving adapter (WPF user interface)
         services.AddSingleton<IUserDialogs, MessageBoxDialogs>();
-        services.AddSingleton<ScreenRecordingFlow>();
-        services.AddSingleton<SequenceEditingFlow>();
-        services.AddSingleton<SequenceExecutionFlow>();
+        services.AddSingleton<IScreenRecordingFlow, ScreenRecordingFlow>();
+        services.AddSingleton<ISequenceEditingFlow, SequenceEditingFlow>();
+        services.AddSingleton<ISequenceExecutionFlow, SequenceExecutionFlow>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
 

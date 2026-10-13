@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using AutoPlay.App.ViewModels;
+using AutoPlay.Presentation.ViewModels;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Recording;
 

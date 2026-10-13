@@ -1,10 +1,10 @@
-using System.Windows.Media.Imaging;
+using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 
-namespace AutoPlay.App.ViewModels;
+namespace AutoPlay.Presentation.ViewModels;
 
 /// <summary>A location that can be added to a sequence, with its template image.</summary>
-public sealed record LocationChoice(Screen Screen, Location Location, BitmapSource? Thumbnail)
+public sealed record LocationChoice(Screen Screen, Location Location, RawImage? Thumbnail)
 {
     public string Name => Location.Name;
 

@@ -2,9 +2,9 @@ using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 
-namespace AutoPlay.Application.Tests.Fakes;
+namespace AutoPlay.TestDoubles;
 
-internal sealed class FakeScreenCapture : IScreenCapture
+public sealed class FakeScreenCapture : IScreenCapture
 {
     public List<PixelRect> Captures { get; } = [];
 
@@ -15,7 +15,7 @@ internal sealed class FakeScreenCapture : IScreenCapture
     }
 }
 
-internal sealed class FakeInputDriver : IInputDriver
+public sealed class FakeInputDriver : IInputDriver
 {
     public List<PixelPoint> Clicks { get; } = [];
 
@@ -38,7 +38,7 @@ internal sealed class FakeInputDriver : IInputDriver
 }
 
 /// <summary>Returns scripted results; the last result is repeated once the script is exhausted.</summary>
-internal sealed class FakeTemplateMatcher(params MatchResult[] results) : ITemplateMatcher
+public sealed class FakeTemplateMatcher(params MatchResult[] results) : ITemplateMatcher
 {
     private int _calls;
 
@@ -51,7 +51,7 @@ internal sealed class FakeTemplateMatcher(params MatchResult[] results) : ITempl
     }
 }
 
-internal sealed class FakePowerManager : IPowerManager
+public sealed class FakePowerManager : IPowerManager
 {
     public int ActiveRequests { get; private set; }
 

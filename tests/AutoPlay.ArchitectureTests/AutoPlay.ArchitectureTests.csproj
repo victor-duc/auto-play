@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\src\AutoPlay.Application\AutoPlay.Application.csproj" />
     <ProjectReference Include="..\..\src\AutoPlay.Adapters.Persistence\AutoPlay.Adapters.Persistence.csproj" />
     <ProjectReference Include="..\..\src\AutoPlay.Adapters.Vision\AutoPlay.Adapters.Vision.csproj" />
+    <ProjectReference Include="..\..\src\AutoPlay.Presentation\AutoPlay.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

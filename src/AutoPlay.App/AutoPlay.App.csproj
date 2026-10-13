@@ -11,13 +11,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AutoPlay.Application\AutoPlay.Application.csproj" />
+    <ProjectReference Include="..\AutoPlay.Presentation\AutoPlay.Presentation.csproj" />
     <ProjectReference Include="..\AutoPlay.Adapters.Persistence\AutoPlay.Adapters.Persistence.csproj" />
     <ProjectReference Include="..\AutoPlay.Adapters.Vision\AutoPlay.Adapters.Vision.csproj" />
     <ProjectReference Include="..\AutoPlay.Adapters.Windows\AutoPlay.Adapters.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Serilog" />
