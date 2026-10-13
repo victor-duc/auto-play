@@ -139,8 +139,13 @@ public sealed partial class RunStatusViewModel : ObservableObject
         RunResult result;
         try
         {
+            // Created on the UI thread, so reports are marshalled back to it.
             var progress = new Progress<RunProgress>(OnProgress);
-            result = await _runner.RunAsync(_profile, _screens, _sequence, _targetRegion, start, progress, cancellation.Token);
+
+            // The engine runs on a worker thread: captures, matching and clicks never block the UI.
+            result = await Task.Run(
+                () => _runner.RunAsync(_profile, _screens, _sequence, _targetRegion, start, progress, cancellation.Token),
+                CancellationToken.None);
         }
         catch (Exception ex)
         {

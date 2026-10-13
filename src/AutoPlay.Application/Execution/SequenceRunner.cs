@@ -45,7 +45,7 @@ public sealed class SequenceRunner(
         using var sleepPrevention = powerManager.PreventSleep();
         RunLog.Started(_logger, sequence.Name, start.Iteration + 1, start.StepIndex + 1, targetRegion);
 
-        var result = await RunIterationsAsync(profile, screens, sequence, targetRegion, start, progress, cancellationToken);
+        var result = await RunIterationsAsync(profile, screens, sequence, targetRegion, start, progress, cancellationToken).ConfigureAwait(false);
         if (result.Status is RunStatus.Completed or RunStatus.Cancelled or RunStatus.UserTookOver)
         {
             RunLog.Finished(_logger, sequence.Name, result.Status, result.Position.Iteration + 1, result.Position.StepIndex + 1, result.Message);
@@ -77,7 +77,7 @@ public sealed class SequenceRunner(
                 for (var stepIndex = firstStep; stepIndex < sequence.Steps.Count; stepIndex++)
                 {
                     position = new RunPosition(iteration, stepIndex);
-                    var outcome = await RunStepAsync(profile, screens, sequence, position, targetRegion, lastClick, progress, cancellationToken);
+                    var outcome = await RunStepAsync(profile, screens, sequence, position, targetRegion, lastClick, progress, cancellationToken).ConfigureAwait(false);
                     if (outcome.Failure is not null)
                     {
                         return outcome.Failure;
@@ -122,7 +122,7 @@ public sealed class SequenceRunner(
         }
 
         var defaults = profile.Defaults;
-        await clock.DelayAsync((step.Delay ?? assets.Screen.DefaultDelay).Next(random), cancellationToken);
+        await clock.DelayAsync((step.Delay ?? assets.Screen.DefaultDelay).Next(random), cancellationToken).ConfigureAwait(false);
 
         var expectedBounds = CoordinateMapper.ToPixel(location.Bounds, targetRegion);
         var clickPoint = CoordinateMapper.ToPixel(location.ClickPoint, targetRegion);
@@ -132,7 +132,7 @@ public sealed class SequenceRunner(
         {
             var timeout = TimeSpan.FromMilliseconds(step.VerificationTimeoutMs ?? defaults.VerificationTimeoutMs);
             var threshold = location.MatchThreshold ?? defaults.MatchThreshold;
-            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, timeout, defaults, cancellationToken);
+            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, timeout, defaults, cancellationToken).ConfigureAwait(false);
             if (verification.Match is not { } match)
             {
                 return (null, new RunResult(RunStatus.VerificationFailed, position)
@@ -197,7 +197,7 @@ public sealed class SequenceRunner(
                 return new Verification(null, bestScore, capture, expectedInCapture);
             }
 
-            await clock.DelayAsync(TimeSpan.FromMilliseconds(defaults.RetryIntervalMs), cancellationToken);
+            await clock.DelayAsync(TimeSpan.FromMilliseconds(defaults.RetryIntervalMs), cancellationToken).ConfigureAwait(false);
         }
     }
 
