@@ -9,7 +9,7 @@
   "properties": {
     "schemaVersion": {
       "description": "Version of the file format.",
-      "const": 1
+      "const": 2
     },
     "id": { "$ref": "#/$defs/guid" },
     "name": {
@@ -59,7 +59,7 @@
       "description": "A clickable element; the content of its bounds is its template image (locations/<location-id>.png).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "positioning", "bounds", "clickPoint", "matchThreshold"],
+      "required": ["id", "name", "positioning", "bounds", "clickPoint", "matchThreshold", "matchColors"],
       "properties": {
         "id": { "$ref": "#/$defs/guid" },
         "name": {
@@ -96,6 +96,10 @@
         "matchThreshold": {
           "description": "Minimum matching score for this location; null to use the profile default.",
           "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/fraction" }]
+        },
+        "matchColors": {
+          "description": "Whether colors must match too, not only shapes (e.g. enabled versus greyed-out button).",
+          "type": "boolean"
         }
       }
     }

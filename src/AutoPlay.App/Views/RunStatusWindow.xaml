@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AutoPlay.App.ViewModels"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:RunStatusViewModel}"
         Title="{Binding SequenceName, StringFormat='AutoPlay — {0}'}"
@@ -14,19 +14,19 @@
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button Content="View capture" Command="{Binding OpenLogImageCommand}"
                     ToolTip="Open the capture taken when the location was not found (expected position in red)." />
-            <Button Content="Stop (F12)" Command="{Binding StopCommand}" />
+            <Button Content="Stop (Esc)" Command="{Binding StopCommand}" ToolTip="Esc or F12, from any window" />
             <Button Content="Resume" Command="{Binding ResumeCommand}" />
             <Button Content="Close" Command="{Binding CloseCommand}" Margin="0" />
         </StackPanel>
 
         <StackPanel>
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding ElapsedText}" Foreground="Gray" VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding ElapsedText}" Foreground="{StaticResource HintBrush}" VerticalAlignment="Center" />
                 <TextBlock x:Name="StateLabel" Text="{Binding StateText}" FontSize="14" FontWeight="SemiBold" />
             </DockPanel>
             <TextBlock Margin="0,6,0,0" Text="{Binding IterationText}" />
             <TextBlock Margin="0,2,0,0" Text="{Binding StepText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding StepText}" />
-            <TextBlock Margin="0,2,0,0" Text="{Binding ScoreText}" Foreground="Gray" />
+            <TextBlock Margin="0,2,0,0" Text="{Binding ScoreText}" Foreground="{StaticResource HintBrush}" />
             <TextBlock Margin="0,6,0,0" Text="{Binding Message}" TextWrapping="Wrap" />
         </StackPanel>
     </DockPanel>
@@ -35,10 +35,10 @@
         <Style TargetType="Window">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding State}" Value="Failed">
-                    <Setter Property="Background" Value="#FFFDECEA" />
+                    <Setter Property="Background" Value="{StaticResource ErrorTintBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Completed">
-                    <Setter Property="Background" Value="#FFEAF6EC" />
+                    <Setter Property="Background" Value="{StaticResource SuccessTintBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

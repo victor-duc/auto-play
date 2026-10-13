@@ -1,4 +1,5 @@
 using System.Windows;
+using AutoPlay.Presentation.Services;
 
 namespace AutoPlay.App.Services;
 
@@ -9,6 +10,25 @@ public sealed class MessageBoxDialogs : IUserDialogs
 
     public void ShowError(string message) =>
         Show(message, "AutoPlay", MessageBoxButton.OK, MessageBoxImage.Error);
+
+    public void ShowInformation(string message) =>
+        Show(message, "AutoPlay", MessageBoxButton.OK, MessageBoxImage.Information);
+
+    public string? AskFolderPath(string title)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = title };
+        return dialog.ShowDialog(System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)) == true
+            ? dialog.FolderName
+            : null;
+    }
+
+    public string? AskSaveFilePath(string title, string defaultFileName, string filter)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Title = title, FileName = defaultFileName, Filter = filter, AddExtension = true };
+        return dialog.ShowDialog(System.Windows.Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)) == true
+            ? dialog.FileName
+            : null;
+    }
 
     private static MessageBoxResult Show(string message, string title, MessageBoxButton buttons, MessageBoxImage image)
     {

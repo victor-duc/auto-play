@@ -15,4 +15,36 @@ public sealed class ProfileDefaults
 
     /// <summary>Distance, in pixels, beyond which a cursor move is considered a user takeover.</summary>
     public int UserTakeoverTolerancePx { get; set; } = 10;
+
+    /// <summary>Returns the errors of the settings, or an empty list if they are valid.</summary>
+    public IReadOnlyList<string> Validate()
+    {
+        var errors = new List<string>();
+        if (MatchThreshold is < 0 or > 1 || double.IsNaN(MatchThreshold))
+        {
+            errors.Add("The match threshold must be between 0 and 1.");
+        }
+
+        if (VerificationTimeoutMs < 0)
+        {
+            errors.Add("The verification timeout must not be negative.");
+        }
+
+        if (RetryIntervalMs < 1)
+        {
+            errors.Add("The retry interval must be at least 1 ms.");
+        }
+
+        if (SearchMargin is < 0 or > 10 || double.IsNaN(SearchMargin))
+        {
+            errors.Add("The search margin must be between 0 and 10 (0 % to 1000 %).");
+        }
+
+        if (UserTakeoverTolerancePx < 0)
+        {
+            errors.Add("The mouse tolerance must not be negative.");
+        }
+
+        return errors;
+    }
 }

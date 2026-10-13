@@ -1,0 +1,135 @@
+using System.Globalization;
+using AutoPlay.Domain.Geometry;
+using AutoPlay.Domain.Recording;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace AutoPlay.Presentation.ViewModels;
+
+/// <summary>A location being edited on a capture, in capture pixel coordinates.</summary>
+public sealed partial class LocationViewModel : ObservableObject
+{
+    public LocationViewModel(LocationDraft draft)
+    {
+        Id = draft.Id;
+        Name = draft.Name;
+        Bounds = draft.Bounds;
+        ClickPoint = draft.ClickPoint;
+        ClickPointIsCenter = draft.ClickPoint == draft.Bounds.Center;
+        MatchThresholdText = draft.MatchThreshold?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        MatchColors = draft.MatchColors;
+    }
+
+    public Guid Id { get; }
+
+    [ObservableProperty]
+    public partial string Name { get; set; }
+
+    /// <summary>Minimum match score, as typed by the user; empty means the profile default.</summary>
+    [ObservableProperty]
+    public partial string MatchThresholdText { get; set; }
+
+    /// <summary>Whether colors must match too, not only shapes.</summary>
+    [ObservableProperty]
+    public partial bool MatchColors { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(ClickOffsetX), nameof(ClickOffsetY))]
+    public partial PixelRect Bounds { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ClickOffsetX), nameof(ClickOffsetY))]
+    public partial PixelPoint ClickPoint { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; }
+
+    /// <summary>
+    /// Set when the location could not be re-positioned automatically after a re-capture; cleared as soon as the
+    /// user moves, resizes or redraws it.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool NeedsReview { get; set; }
+
+    /// <summary>Whether the click point follows the center of the rectangle (until the user sets it explicitly).</summary>
+    public bool ClickPointIsCenter { get; private set; }
+
+    public int X => Bounds.Left;
+
+    public int Y => Bounds.Top;
+
+    public int Width => Bounds.Width;
+
+    public int Height => Bounds.Height;
+
+    /// <summary>Center of the click pixel, relative to the rectangle.</summary>
+    public double ClickOffsetX => ClickPoint.X - Bounds.Left + 0.5;
+
+    /// <summary>Center of the click pixel, relative to the rectangle.</summary>
+    public double ClickOffsetY => ClickPoint.Y - Bounds.Top + 0.5;
+
+    /// <summary>Moves the rectangle; the click point keeps its position relative to it.</summary>
+    public void MoveTo(PixelRect bounds)
+    {
+        NeedsReview = false;
+        var offset = new PixelPoint(ClickPoint.X - Bounds.Left, ClickPoint.Y - Bounds.Top);
+        Bounds = bounds;
+        ClickPoint = ClickPointIsCenter ? bounds.Center : RectEditing.Clamp(new PixelPoint(bounds.Left + offset.X, bounds.Top + offset.Y), bounds);
+    }
+
+    /// <summary>Resizes the rectangle; the click point stays centered or is kept inside.</summary>
+    public void ResizeTo(PixelRect bounds)
+    {
+        NeedsReview = false;
+        Bounds = bounds;
+        ClickPoint = ClickPointIsCenter ? bounds.Center : RectEditing.Clamp(ClickPoint, bounds);
+    }
+
+    /// <summary>
+    /// Replaces the rectangle by a newly drawn one (re-positioning): the click point stays centered, or keeps its
+    /// relative position in the rectangle.
+    /// </summary>
+    public void RedrawTo(PixelRect bounds)
+    {
+        NeedsReview = false;
+        var old = Bounds;
+        Bounds = bounds;
+        if (ClickPointIsCenter || old.IsEmpty)
+        {
+            ClickPoint = bounds.Center;
+            return;
+        }
+
+        var relativeX = (ClickPoint.X - old.Left + 0.5) / old.Width;
+        var relativeY = (ClickPoint.Y - old.Top + 0.5) / old.Height;
+        ClickPoint = RectEditing.Clamp(
+            new PixelPoint(bounds.Left + (int)Math.Floor(relativeX * bounds.Width), bounds.Top + (int)Math.Floor(relativeY * bounds.Height)),
+            bounds);
+    }
+
+    public void SetClickPoint(PixelPoint point)
+    {
+        NeedsReview = false;
+        ClickPointIsCenter = false;
+        ClickPoint = RectEditing.Clamp(point, Bounds);
+    }
+
+    /// <summary>Converts to a draft; returns an error message if the threshold cannot be parsed.</summary>
+    public string? TryToDraft(out LocationDraft draft)
+    {
+        double? threshold = null;
+        var text = MatchThresholdText.Trim().Replace(',', '.');
+        if (text.Length > 0)
+        {
+            if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            {
+                draft = null!;
+                return $"The match threshold of '{Name}' is not a number.";
+            }
+
+            threshold = value;
+        }
+
+        draft = new LocationDraft { Id = Id, Name = Name, Bounds = Bounds, ClickPoint = ClickPoint, MatchThreshold = threshold, MatchColors = MatchColors };
+        return null;
+    }
+}

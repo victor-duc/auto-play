@@ -13,7 +13,7 @@ namespace AutoPlay.Adapters.Persistence.Tests;
 /// </summary>
 public sealed class FileFormatTests : IDisposable
 {
-    private const int CurrentVersion = 1;
+    private const int CurrentVersion = 2;
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "AutoPlayTests", Guid.NewGuid().ToString());
     private readonly FileProfileStore _store;
@@ -70,6 +70,7 @@ public sealed class FileFormatTests : IDisposable
             Bounds = new NormalizedRect(0, 0, 1, 1),
             ClickPoint = new NormalizedPoint(0.5, 0.5),
             MatchThreshold = 0.9,
+            MatchColors = true,
         };
         var screen = new Screen
         {
@@ -103,13 +104,48 @@ public sealed class FileFormatTests : IDisposable
                     VerificationTimeoutMs = 5000,
                     Verify = false,
                 },
+                SequenceStep.Wait(new DelayRange(1000, 2000)),
+                new SequenceStep { Kind = StepKind.RunSequence, SequenceId = Guid.NewGuid() },
             ],
+            Schedule = new SequenceSchedule { Time = new TimeOnly(8, 30), Days = [DayOfWeek.Monday, DayOfWeek.Friday] },
         };
         _store.SaveSequence(_profile.Id, sequence);
 
         var json = File.ReadAllText(Path.Combine(ProfileDirectory, "sequences", $"{sequence.Id}.json"));
 
         Assert.Empty(JsonSchemas.Validate(JsonSchemas.Sequence, json));
+    }
+
+    [Fact]
+    public void Settings_match_the_schema_and_round_trip()
+    {
+        var store = new JsonSettingsStore(Path.Combine(_root, "settings.json"));
+        Assert.Equal(AutoPlay.Application.Settings.ThemePreference.System, store.Load().Theme);
+
+        store.Save(new AutoPlay.Application.Settings.AppSettings
+        {
+            Theme = AutoPlay.Application.Settings.ThemePreference.Dark,
+            StopWithEscape = false,
+            QuickCaptureHotkey = "Ctrl+Alt+F10",
+            DataFolder = @"D:\AutoPlay",
+        });
+
+        Assert.Empty(JsonSchemas.Validate(JsonSchemas.Settings, File.ReadAllText(Path.Combine(_root, "settings.json"))));
+        var loaded = store.Load();
+        Assert.Equal(AutoPlay.Application.Settings.ThemePreference.Dark, loaded.Theme);
+        Assert.False(loaded.StopWithEscape);
+        Assert.Equal("Ctrl+Alt+F10", loaded.QuickCaptureHotkey);
+        Assert.Equal(@"D:\AutoPlay", loaded.DataFolder);
+    }
+
+    [Fact]
+    public void Corrupted_settings_are_a_persistence_error()
+    {
+        var path = Path.Combine(_root, "settings.json");
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(path, "{ broken");
+
+        Assert.Throws<PersistenceException>(() => new JsonSettingsStore(path).Load());
     }
 
     // ---- Content of the files
@@ -138,6 +174,7 @@ public sealed class FileFormatTests : IDisposable
     [InlineData("profile")]
     [InlineData("screen")]
     [InlineData("sequence")]
+    [InlineData("settings")]
     public void Schemas_target_the_current_version(string name)
     {
         var schema = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "schemas", $"{name}.schema.json")))!;
@@ -164,11 +201,39 @@ public sealed class FileFormatTests : IDisposable
         var invalidThreshold = JsonNode.Parse(ProfileJson)!;
         invalidThreshold["defaults"]!["matchThreshold"] = 1.5;
         var otherVersion = JsonNode.Parse(ProfileJson)!;
-        otherVersion["schemaVersion"] = 2;
+        otherVersion["schemaVersion"] = CurrentVersion + 1;
 
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, missingName.ToJsonString()));
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, invalidThreshold.ToJsonString()));
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, otherVersion.ToJsonString()));
+    }
+
+    [Fact]
+    public void Schema_requires_a_duration_for_a_wait()
+    {
+        var sequence = new Sequence { Name = "S", Steps = [SequenceStep.Wait(new DelayRange(1, 2))] };
+        _store.SaveSequence(_profile.Id, sequence);
+        var json = JsonNode.Parse(File.ReadAllText(Path.Combine(ProfileDirectory, "sequences", $"{sequence.Id}.json")))!;
+        json["steps"]![0]!["delay"] = null;
+
+        Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Sequence, json.ToJsonString()));
+    }
+
+    [Fact]
+    public void Schedule_round_trips()
+    {
+        var sequence = new Sequence
+        {
+            Name = "S",
+            Schedule = new SequenceSchedule { Enabled = false, Time = new TimeOnly(23, 59, 30), Days = [DayOfWeek.Sunday] },
+        };
+        _store.SaveSequence(_profile.Id, sequence);
+
+        var schedule = Assert.Single(_store.LoadSequences(_profile.Id)).Schedule!;
+
+        Assert.False(schedule.Enabled);
+        Assert.Equal(new TimeOnly(23, 59, 30), schedule.Time);
+        Assert.Equal([DayOfWeek.Sunday], schedule.Days);
     }
 
     // ---- Older and newer versions
@@ -211,6 +276,36 @@ public sealed class FileFormatTests : IDisposable
     }
 
     [Fact]
+    public void Files_written_by_version_1_are_read_with_defaults()
+    {
+        var screenId = Guid.NewGuid();
+        var locationId = Guid.NewGuid();
+        var screenDirectory = Path.Combine(ProfileDirectory, "screens", screenId.ToString());
+        Directory.CreateDirectory(screenDirectory);
+        File.WriteAllText(Path.Combine(screenDirectory, "screen.json"), $$"""
+            {
+              "schemaVersion": 1,
+              "id": "{{screenId}}",
+              "name": "Map",
+              "recordedRegionSize": { "width": 100, "height": 50 },
+              "defaultDelay": { "minMs": 1, "maxMs": 2 },
+              "locations": [
+                {
+                  "id": "{{locationId}}", "name": "A", "positioning": "Proportional",
+                  "bounds": { "x": 0, "y": 0, "width": 0.5, "height": 0.5 },
+                  "clickPoint": { "x": 0.25, "y": 0.25 }, "matchThreshold": null
+                }
+              ]
+            }
+            """);
+
+        var location = Assert.Single(Assert.Single(_store.LoadScreens(_profile.Id)).Locations);
+
+        Assert.Equal("A", location.Name);
+        Assert.False(location.MatchColors);
+    }
+
+    [Fact]
     public void Files_from_a_newer_version_are_refused()
     {
         File.WriteAllText(Path.Combine(ProfileDirectory, "profile.json"), $$"""{ "schemaVersion": 99, "id": "{{_profile.Id}}", "name": "Future" }""");
@@ -229,5 +324,37 @@ public sealed class FileFormatTests : IDisposable
         File.WriteAllText(Path.Combine(ProfileDirectory, "profile.json"), $$"""{ "schemaVersion": {{version}}, "id": "{{_profile.Id}}", "name": "Broken" }""");
 
         Assert.Throws<PersistenceException>(() => _store.LoadProfiles());
+    }
+
+    [Fact]
+    public void Run_history_matches_the_schema_and_keeps_the_last_run_of_each_sequence()
+    {
+        var sequenceId = Guid.NewGuid();
+        var endedAt = new DateTimeOffset(2026, 5, 6, 7, 8, 9, TimeSpan.FromHours(2));
+        _store.SaveLastRun(_profile.Id, new AutoPlay.Application.Execution.RunSummary
+        {
+            SequenceId = sequenceId,
+            EndedAt = endedAt.AddHours(-1),
+            Status = AutoPlay.Application.Execution.RunStatus.Completed,
+        });
+        _store.SaveLastRun(_profile.Id, new AutoPlay.Application.Execution.RunSummary
+        {
+            SequenceId = sequenceId,
+            EndedAt = endedAt,
+            Status = AutoPlay.Application.Execution.RunStatus.VerificationFailed,
+            Message = "'Map / Attack' was not found.",
+        });
+
+        Assert.Empty(JsonSchemas.Validate(JsonSchemas.RunHistory, File.ReadAllText(Path.Combine(ProfileDirectory, "runs.json"))));
+        var run = Assert.Single(_store.LoadLastRuns(_profile.Id));
+        Assert.Equal(endedAt, run.EndedAt);
+        Assert.Equal(AutoPlay.Application.Execution.RunStatus.VerificationFailed, run.Status);
+        Assert.Equal("'Map / Attack' was not found.", run.Message);
+    }
+
+    [Fact]
+    public void Missing_run_history_is_empty()
+    {
+        Assert.Empty(_store.LoadLastRuns(Guid.NewGuid()));
     }
 }

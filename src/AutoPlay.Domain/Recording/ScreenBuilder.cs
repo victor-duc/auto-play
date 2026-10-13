@@ -85,6 +85,7 @@ public static class ScreenBuilder
                     Bounds = CoordinateMapper.ToNormalized(draft.Bounds, region),
                     ClickPoint = CoordinateMapper.ToNormalized(draft.ClickPoint, region),
                     MatchThreshold = draft.MatchThreshold,
+                    MatchColors = draft.MatchColors,
                 })
                 .ToList(),
         };
@@ -108,6 +109,7 @@ public static class ScreenBuilder
                     Bounds = bounds,
                     ClickPoint = RectEditing.Clamp(CoordinateMapper.ToPixel(location.ClickPoint, region), bounds),
                     MatchThreshold = location.MatchThreshold,
+                    MatchColors = location.MatchColors,
                 };
             })
             .ToList();

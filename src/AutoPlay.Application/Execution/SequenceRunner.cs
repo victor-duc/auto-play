@@ -2,6 +2,8 @@ using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.Execution;
 
@@ -15,8 +17,11 @@ public sealed class SequenceRunner(
     ITemplateMatcher templateMatcher,
     IPowerManager powerManager,
     IClock clock,
-    Random random)
+    Random random,
+    ILogger<SequenceRunner>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     /// <param name="profile">The profile providing the default settings.</param>
     /// <param name="screens">The screens referenced by the sequence, by screen ID.</param>
     /// <param name="sequence">The sequence to execute.</param>
@@ -38,7 +43,30 @@ public sealed class SequenceRunner(
         }
 
         using var sleepPrevention = powerManager.PreventSleep();
+        RunLog.Started(_logger, sequence.Name, start.Iteration + 1, start.StepIndex + 1, targetRegion);
 
+        var result = await RunIterationsAsync(profile, screens, sequence, targetRegion, start, progress, cancellationToken).ConfigureAwait(false);
+        if (result.Status is RunStatus.Completed or RunStatus.Cancelled or RunStatus.UserTookOver)
+        {
+            RunLog.Finished(_logger, sequence.Name, result.Status, result.Position.Iteration + 1, result.Position.StepIndex + 1, result.Message);
+        }
+        else
+        {
+            RunLog.Failed(_logger, sequence.Name, result.Status, result.Position.Iteration + 1, result.Position.StepIndex + 1, result.Message);
+        }
+
+        return result;
+    }
+
+    private async Task<RunResult> RunIterationsAsync(
+        Profile profile,
+        IReadOnlyDictionary<Guid, ScreenAssets> screens,
+        Sequence sequence,
+        PixelRect targetRegion,
+        RunPosition start,
+        IProgress<RunProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         var position = start;
         PixelPoint? lastClick = null;
         try
@@ -49,7 +77,7 @@ public sealed class SequenceRunner(
                 for (var stepIndex = firstStep; stepIndex < sequence.Steps.Count; stepIndex++)
                 {
                     position = new RunPosition(iteration, stepIndex);
-                    var outcome = await RunStepAsync(profile, screens, sequence, position, targetRegion, lastClick, progress, cancellationToken);
+                    var outcome = await RunStepAsync(profile, screens, sequence, position, targetRegion, lastClick, progress, cancellationToken).ConfigureAwait(false);
                     if (outcome.Failure is not null)
                     {
                         return outcome.Failure;
@@ -83,6 +111,24 @@ public sealed class SequenceRunner(
         CancellationToken cancellationToken)
     {
         var step = sequence.Steps[position.StepIndex];
+        if (step.Kind == StepKind.Wait)
+        {
+            // A wait keeps the last click position, so that a mouse move during the wait still pauses the run.
+            progress?.Report(new RunProgress(position, sequence.Steps.Count, null));
+            var duration = (step.Delay ?? new DelayRange(0, 0)).Next(random);
+            RunLog.Wait(_logger, position.Iteration + 1, position.StepIndex + 1, (int)duration.TotalMilliseconds);
+            await clock.DelayAsync(duration, cancellationToken).ConfigureAwait(false);
+            return (lastClick, null);
+        }
+
+        if (step.Kind != StepKind.Click)
+        {
+            return (null, new RunResult(RunStatus.InvalidStep, position)
+            {
+                Message = $"Step {position.StepIndex + 1} must be expanded before running (it runs another sequence).",
+            });
+        }
+
         if (!screens.TryGetValue(step.ScreenId, out var assets)
             || assets.Screen.FindLocation(step.LocationId) is not { } location
             || !assets.Templates.TryGetValue(location.Id, out var template))
@@ -94,7 +140,7 @@ public sealed class SequenceRunner(
         }
 
         var defaults = profile.Defaults;
-        await clock.DelayAsync((step.Delay ?? assets.Screen.DefaultDelay).Next(random), cancellationToken);
+        await clock.DelayAsync((step.Delay ?? assets.Screen.DefaultDelay).Next(random), cancellationToken).ConfigureAwait(false);
 
         var expectedBounds = CoordinateMapper.ToPixel(location.Bounds, targetRegion);
         var clickPoint = CoordinateMapper.ToPixel(location.ClickPoint, targetRegion);
@@ -104,7 +150,7 @@ public sealed class SequenceRunner(
         {
             var timeout = TimeSpan.FromMilliseconds(step.VerificationTimeoutMs ?? defaults.VerificationTimeoutMs);
             var threshold = location.MatchThreshold ?? defaults.MatchThreshold;
-            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, timeout, defaults, cancellationToken);
+            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, location.MatchColors, timeout, defaults, cancellationToken).ConfigureAwait(false);
             if (verification.Match is not { } match)
             {
                 return (null, new RunResult(RunStatus.VerificationFailed, position)
@@ -128,6 +174,7 @@ public sealed class SequenceRunner(
 
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new RunProgress(position, sequence.Steps.Count, score));
+        RunLog.Click(_logger, position.Iteration + 1, position.StepIndex + 1, assets.Screen.Name, location.Name, score, clickPoint.X, clickPoint.Y);
         inputDriver.Click(clickPoint);
         return (clickPoint, null);
     }
@@ -137,15 +184,12 @@ public sealed class SequenceRunner(
         PixelRect expectedBounds,
         PixelRect targetRegion,
         double threshold,
+        bool matchColors,
         TimeSpan timeout,
         ProfileDefaults defaults,
         CancellationToken cancellationToken)
     {
-        var searchArea = expectedBounds
-            .Inflate(
-                CoordinateMapper.Round(expectedBounds.Width * defaults.SearchMargin),
-                CoordinateMapper.Round(expectedBounds.Height * defaults.SearchMargin))
-            .Intersect(targetRegion);
+        var searchArea = SearchArea.Around(expectedBounds, targetRegion, defaults.SearchMargin);
         var expectedInCapture = expectedBounds.Offset(-searchArea.Left, -searchArea.Top);
         var deadline = clock.UtcNow + timeout;
         var bestScore = 0.0;
@@ -153,7 +197,7 @@ public sealed class SequenceRunner(
         while (true)
         {
             var capture = screenCapture.Capture(searchArea);
-            var result = templateMatcher.FindBestMatch(capture, template, expectedBounds.Size);
+            var result = templateMatcher.FindBestMatch(capture, template, expectedBounds.Size, matchColors);
             bestScore = Math.Max(bestScore, result.Score);
 
             if (result.Score >= threshold)
@@ -168,10 +212,29 @@ public sealed class SequenceRunner(
                 return new Verification(null, bestScore, capture, expectedInCapture);
             }
 
-            await clock.DelayAsync(TimeSpan.FromMilliseconds(defaults.RetryIntervalMs), cancellationToken);
+            await clock.DelayAsync(TimeSpan.FromMilliseconds(defaults.RetryIntervalMs), cancellationToken).ConfigureAwait(false);
         }
     }
 
     /// <param name="Match">The accepted match, in screen coordinates, or null if none was found.</param>
     private sealed record Verification(MatchResult? Match, double BestScore, RawImage LastCapture, PixelRect ExpectedBoundsInCapture);
+}
+
+/// <summary>Log messages of the sequence engine (source-generated for performance).</summary>
+internal static partial class RunLog
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Run of '{Sequence}' started at iteration {Iteration}, step {Step}, in region {Region}")]
+    public static partial void Started(ILogger logger, string sequence, int iteration, int step, PixelRect region);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Iteration {Iteration}, step {Step}: '{Screen} / {Location}' (score {Score}) clicked at ({X}, {Y})")]
+    public static partial void Click(ILogger logger, int iteration, int step, string screen, string location, double? score, int x, int y);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Iteration {Iteration}, step {Step}: wait {DurationMs} ms")]
+    public static partial void Wait(ILogger logger, int iteration, int step, int durationMs);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Run of '{Sequence}' ended: {Status} at iteration {Iteration}, step {Step}. {Message}")]
+    public static partial void Finished(ILogger logger, string sequence, RunStatus status, int iteration, int step, string? message);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Run of '{Sequence}' failed: {Status} at iteration {Iteration}, step {Step}. {Message}")]
+    public static partial void Failed(ILogger logger, string sequence, RunStatus status, int iteration, int step, string? message);
 }

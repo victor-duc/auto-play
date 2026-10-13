@@ -1,5 +1,5 @@
 using AutoPlay.Application.Ports;
-using AutoPlay.Application.Tests.Fakes;
+using AutoPlay.TestDoubles;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 
@@ -84,6 +84,50 @@ public class SequenceServiceTests
     public void Duplicate_of_a_missing_sequence_fails()
     {
         Assert.Equal(["The sequence no longer exists."], _service.Duplicate(_profileId, Guid.NewGuid()).Errors);
+    }
+
+    [Fact]
+    public void Save_refuses_chaining_loops()
+    {
+        var a = NewSequence("A");
+        _service.Save(_profileId, a);
+        var b = NewSequence("B");
+        b.Steps.Add(new SequenceStep { Kind = StepKind.RunSequence, SequenceId = a.Id });
+        _service.Save(_profileId, b);
+        a.Steps.Add(new SequenceStep { Kind = StepKind.RunSequence, SequenceId = b.Id });
+
+        var result = _service.Save(_profileId, a);
+
+        Assert.Contains("Step 2 of 'B' creates a loop: a sequence cannot run itself, directly or not.", result.Errors);
+    }
+
+    [Fact]
+    public void A_sequence_run_by_another_cannot_repeat_until_stopped()
+    {
+        var inner = NewSequence("Inner");
+        _service.Save(_profileId, inner);
+        var outer = NewSequence("Outer");
+        outer.Steps.Add(new SequenceStep { Kind = StepKind.RunSequence, SequenceId = inner.Id });
+        _service.Save(_profileId, outer);
+        inner.RepeatCount = 0;
+
+        var result = _service.Save(_profileId, inner);
+
+        Assert.Equal(["This sequence is run by 'Outer': it cannot repeat until stopped."], result.Errors);
+        Assert.Equal([outer.Id], _service.GetCallers(_profileId, inner.Id).Select(s => s.Id));
+    }
+
+    [Fact]
+    public void SetSchedule_changes_only_the_schedule()
+    {
+        var sequence = NewSequence("Raids");
+        _service.Save(_profileId, sequence);
+
+        var result = _service.SetSchedule(_profileId, sequence.Id, new SequenceSchedule { Time = new TimeOnly(8, 30) });
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new TimeOnly(8, 30), Assert.Single(_service.GetSequences(_profileId)).Schedule!.Time);
+        Assert.False(_service.SetSchedule(_profileId, Guid.NewGuid(), null).Succeeded);
     }
 
     [Fact]

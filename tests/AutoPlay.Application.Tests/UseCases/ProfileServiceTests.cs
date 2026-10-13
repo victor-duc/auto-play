@@ -1,5 +1,5 @@
 using AutoPlay.Application.Ports;
-using AutoPlay.Application.Tests.Fakes;
+using AutoPlay.TestDoubles;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
@@ -62,6 +62,35 @@ public class ProfileServiceTests
         _service.RememberTargetRegion(profile, region);
 
         Assert.Equal(region, Assert.Single(_repository.Profiles).LastTargetRegion);
+    }
+
+    [Fact]
+    public void ExportProfile_reports_storage_errors()
+    {
+        var archive = new FailingArchive();
+        var service = new ProfileService(_repository, archive);
+
+        Assert.Equal(["Disk full"], service.ExportProfile(Guid.NewGuid(), "out.zip").Errors);
+        Assert.False(_service.ExportProfile(Guid.NewGuid(), "out.zip").Succeeded);
+    }
+
+    private sealed class FailingArchive : IProfileArchive
+    {
+        public void ExportProfile(Guid profileId, string destinationPath) => throw new PersistenceException("Disk full");
+    }
+
+    [Fact]
+    public void UpdateDefaults_validates_and_saves()
+    {
+        var profile = _service.CreateProfile("Game").Value!;
+
+        var invalid = _service.UpdateDefaults(profile, new ProfileDefaults { MatchThreshold = 2, RetryIntervalMs = 0 });
+        Assert.Equal(["The match threshold must be between 0 and 1.", "The retry interval must be at least 1 ms."], invalid.Errors);
+        Assert.Equal(0.8, profile.Defaults.MatchThreshold);
+
+        var valid = _service.UpdateDefaults(profile, new ProfileDefaults { MatchThreshold = 0.9 });
+        Assert.True(valid.Succeeded);
+        Assert.Equal(0.9, Assert.Single(_repository.Profiles).Defaults.MatchThreshold);
     }
 
     [Fact]

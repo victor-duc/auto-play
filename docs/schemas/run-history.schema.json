@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victor-duc/auto-play/docs/schemas/run-history.schema.json",
+  "title": "AutoPlay run history",
+  "description": "<profile>/runs.json: how the last run of each sequence ended, shown in the main window. Not exported.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "lastRuns"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of the file format.",
+      "const": 2
+    },
+    "lastRuns": {
+      "description": "The last run of each sequence (one entry per sequence).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/runSummary" }
+    }
+  },
+  "$defs": {
+    "runSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequenceId", "endedAt", "status", "message"],
+      "properties": {
+        "sequenceId": {
+          "description": "Id of the sequence that was run.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "endedAt": {
+          "description": "When the run ended, with its offset from UTC.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "description": "How the run ended.",
+          "enum": ["Completed", "Cancelled", "UserTookOver", "VerificationFailed", "InvalidStep"]
+        },
+        "message": {
+          "description": "Explanation of a run that did not complete.",
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

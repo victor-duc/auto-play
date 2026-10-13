@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    OpenCV's Windows runtime package also ships opencv_videoio_ffmpeg (about 28 MB), used only for
+    video files. AutoPlay never reads video, so the DLL is left out of build and publish outputs.
+  -->
+  <Target Name="ExcludeOpenCvFfmpeg" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('opencv_videoio_ffmpeg'))" />
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('opencv_videoio_ffmpeg'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

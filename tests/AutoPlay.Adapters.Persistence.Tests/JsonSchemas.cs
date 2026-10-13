@@ -14,6 +14,10 @@ internal static class JsonSchemas
 
     public static JsonSchema Sequence { get; } = Load("sequence");
 
+    public static JsonSchema Settings { get; } = Load("settings");
+
+    public static JsonSchema RunHistory { get; } = Load("run-history");
+
     /// <summary>Returns the validation errors of a JSON document, or an empty list if it is valid.</summary>
     public static List<string> Validate(JsonSchema schema, string json)
     {

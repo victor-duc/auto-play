@@ -1,12 +1,16 @@
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Model;
 using AutoPlay.Domain.Sequencing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
 /// <summary>Use cases on sequences: save, duplicate, delete and read them.</summary>
-public sealed class SequenceService(ISequenceRepository sequences, IScreenRepository screens)
+public sealed class SequenceService(ISequenceRepository sequences, IScreenRepository screens, ILogger<SequenceService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     public IReadOnlyList<Sequence> GetSequences(Guid profileId) => sequences.LoadSequences(profileId);
 
     /// <summary>Validates and saves a new or edited sequence; its name is trimmed.</summary>
@@ -14,9 +18,19 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
     {
         try
         {
-            var otherNames = sequences.LoadSequences(profileId).Where(s => s.Id != sequence.Id).Select(s => s.Name);
+            var all = sequences.LoadSequences(profileId);
+            var otherNames = all.Where(s => s.Id != sequence.Id).Select(s => s.Name);
             var errors = SequenceValidator.Validate(
-                sequence.Name, sequence.RepeatCount, sequence.Steps, screens.LoadScreens(profileId), otherNames);
+                    sequence.Name, sequence.RepeatCount, sequence.Steps, screens.LoadScreens(profileId), otherNames)
+                .Concat(SequenceExpander.ValidateChaining(sequence, all))
+                .ToList();
+
+            // Changing the repeat count to "until stopped" would make the sequences that run this one endless.
+            if (sequence.RepeatCount == 0 && SequenceExpander.FindCallers(all, sequence.Id) is { Count: > 0 } callers)
+            {
+                errors.Add($"This sequence is run by {string.Join(", ", callers.Select(c => $"'{c.Name}'"))}: it cannot repeat until stopped.");
+            }
+
             if (errors.Count > 0)
             {
                 return OperationResult.Failure(errors);
@@ -28,6 +42,7 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure(ex.Message);
         }
     }
@@ -54,23 +69,40 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
             {
                 Name = name,
                 RepeatCount = original.RepeatCount,
-                Steps = original.Steps
-                    .Select(s => new SequenceStep
-                    {
-                        ScreenId = s.ScreenId,
-                        LocationId = s.LocationId,
-                        Delay = s.Delay,
-                        VerificationTimeoutMs = s.VerificationTimeoutMs,
-                        Verify = s.Verify,
-                    })
-                    .ToList(),
+                Steps = original.Steps.Select(s => s.Clone()).ToList(),
             };
             sequences.SaveSequence(profileId, copy);
             return OperationResult.Success(copy);
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure<Sequence>(ex.Message);
+        }
+    }
+
+    /// <summary>Returns the sequences that run the given one, which deleting it would break.</summary>
+    public IReadOnlyList<Sequence> GetCallers(Guid profileId, Guid sequenceId) =>
+        SequenceExpander.FindCallers(sequences.LoadSequences(profileId), sequenceId);
+
+    /// <summary>Changes the automatic start of a sequence (null to remove it).</summary>
+    public OperationResult SetSchedule(Guid profileId, Guid sequenceId, SequenceSchedule? schedule)
+    {
+        try
+        {
+            if (sequences.LoadSequences(profileId).FirstOrDefault(s => s.Id == sequenceId) is not { } sequence)
+            {
+                return OperationResult.Failure("The sequence no longer exists.");
+            }
+
+            sequence.Schedule = schedule;
+            sequences.SaveSequence(profileId, sequence);
+            return OperationResult.Success();
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+            return OperationResult.Failure(ex.Message);
         }
     }
 

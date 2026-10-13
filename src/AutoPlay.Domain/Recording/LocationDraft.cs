@@ -14,4 +14,13 @@ public sealed record LocationDraft
     public PixelPoint ClickPoint { get; init; }
 
     public double? MatchThreshold { get; init; }
+
+    public bool MatchColors { get; init; }
+
+    /// <summary>Returns the draft moved to <paramref name="bounds"/>, the click point keeping its offset in the rectangle.</summary>
+    public LocationDraft MovedTo(PixelRect bounds) => this with
+    {
+        Bounds = bounds,
+        ClickPoint = RectEditing.Clamp(ClickPoint.Offset(bounds.Left - Bounds.Left, bounds.Top - Bounds.Top), bounds),
+    };
 }

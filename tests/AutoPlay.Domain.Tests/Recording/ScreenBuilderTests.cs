@@ -98,13 +98,24 @@ public class ScreenBuilderTests
     }
 
     [Fact]
+    public void MovedTo_keeps_the_click_offset()
+    {
+        var draft = Draft("A", 10, 10) with { ClickPoint = new PixelPoint(12, 18) };
+
+        var moved = draft.MovedTo(new PixelRect(100, 50, 20, 10));
+
+        Assert.Equal(new PixelPoint(102, 58), moved.ClickPoint);
+        Assert.Equal(new PixelPoint(101, 43), draft.MovedTo(new PixelRect(99, 41, 3, 3)).ClickPoint); // Clamped inside.
+    }
+
+    [Fact]
     public void ToDrafts_round_trips_with_Build()
     {
         var capture = TestImages.Gradient(197, 83); // Odd sizes to exercise rounding.
         LocationDraft[] drafts =
         [
             new() { Name = "A", Bounds = new PixelRect(13, 7, 31, 17), ClickPoint = new PixelPoint(14, 23) },
-            new() { Name = "B", Bounds = new PixelRect(150, 60, 47, 23), ClickPoint = new PixelPoint(196, 82), MatchThreshold = 0.7 },
+            new() { Name = "B", Bounds = new PixelRect(150, 60, 47, 23), ClickPoint = new PixelPoint(196, 82), MatchThreshold = 0.7, MatchColors = true },
         ];
 
         var (screen, _) = ScreenBuilder.Build(Guid.NewGuid(), "S", new DelayRange(0, 0), capture, drafts);

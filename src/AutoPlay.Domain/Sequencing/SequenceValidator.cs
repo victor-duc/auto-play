@@ -40,9 +40,17 @@ public static class SequenceValidator
         for (var i = 0; i < steps.Count; i++)
         {
             var step = steps[i];
-            if (FindLocation(screens, step) is null)
+            switch (step.Kind)
             {
-                errors.Add($"Step {i + 1} refers to a screen or location that no longer exists.");
+                case StepKind.Click when FindLocation(screens, step) is null:
+                    errors.Add($"Step {i + 1} refers to a screen or location that no longer exists.");
+                    break;
+                case StepKind.Wait when step.Delay is null:
+                    errors.Add($"The wait of step {i + 1} needs a duration.");
+                    break;
+                case StepKind.RunSequence when step.SequenceId is null:
+                    errors.Add($"Step {i + 1} must say which sequence to run.");
+                    break;
             }
 
             if (step.VerificationTimeoutMs is < 0)
@@ -54,11 +62,11 @@ public static class SequenceValidator
         return errors;
     }
 
-    /// <summary>Returns the location a step refers to, or null if its screen or location was deleted.</summary>
+    /// <summary>Returns the location a click step refers to, or null if its screen or location was deleted.</summary>
     public static Location? FindLocation(IReadOnlyList<Screen> screens, SequenceStep step) =>
-        screens.FirstOrDefault(s => s.Id == step.ScreenId)?.FindLocation(step.LocationId);
+        step.Kind == StepKind.Click ? screens.FirstOrDefault(s => s.Id == step.ScreenId)?.FindLocation(step.LocationId) : null;
 
     /// <summary>Returns the sequences that have at least one step on the given screen.</summary>
     public static IReadOnlyList<Sequence> FindUsages(IEnumerable<Sequence> sequences, Guid screenId) =>
-        sequences.Where(s => s.Steps.Any(step => step.ScreenId == screenId)).ToList();
+        sequences.Where(s => s.Steps.Any(step => step.Kind == StepKind.Click && step.ScreenId == screenId)).ToList();
 }

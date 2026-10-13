@@ -14,19 +14,29 @@ DOM-based tools such as Playwright cannot target elements).
 ## Features
 
 - **Screen recording**: frame the target area with a semi-transparent overlay, capture it, then draw
-  the click locations on the frozen capture and name them.
-- **Sequence editor**: chain locations from any screen, reorder, duplicate, set delays and verification
-  per step, repeat a sequence N times or until stopped.
+  the click locations on the frozen capture (with zoom and pan) and name them.
+- **Quick capture**: while playing, press a shortcut (Ctrl+Shift+F9 by default) to capture the
+  current screen in one keystroke, and annotate the captures later.
+- **Maintenance**: re-capture a screen after a game update (locations are re-positioned
+  automatically), redraw a location, test a step on the live screen without clicking.
+- **Sequence editor**: chain locations from any screen, add waits, run other sequences, reorder by
+  drag and drop, set delays and verification per step, repeat a sequence N times or until stopped,
+  run it from any step.
+- **Scheduling**: start a sequence automatically at a time of the day, on chosen days.
 - **Reliable execution**:
   - random delay before each click, for a human-like rhythm;
   - image verification before each click, tolerant to resizing, moderate position changes and
-    transient visual effects;
+    transient visual effects, optionally comparing colors (to tell an enabled button from a greyed-out
+    one);
   - coordinates that follow the target area when the window is moved or resized (proportional
     positioning).
-- **Safety**: **F12** stops a run at any time, moving the mouse pauses it, and the PC does not go to
-  sleep while a sequence runs.
+- **Safety**: **F12** or **Esc** stops a run at any time, moving the mouse pauses it, and the PC does
+  not go to sleep while a sequence runs.
 - **Diagnostics**: when an element is not found, the capture is saved with the expected position
-  drawn in red.
+  drawn in red; the main window shows the outcome of the last run of each sequence; a log file records
+  every run.
+- **Settings, export and themes**: profile defaults and shortcuts editable in a settings window,
+  export of a profile as a `.zip`, light and dark themes (Windows 11 Fluent style).
 
 ## Requirements
 
@@ -61,6 +71,9 @@ version that runs without installing .NET, use `--self-contained true` (the fold
 
 ## User guide
 
+On first use, the main window guides you through the three steps below: each empty list explains
+what to do.
+
 ### 1. Create a profile
 
 A profile groups the screens and sequences of one application (for example "Hero Wars"). Type a name
@@ -79,73 +92,110 @@ under the **Profiles** list and click **Add**.
    |---|---|
    | Create a location | Drag around the element (a simple click creates a 48 × 48 px square) |
    | Move / resize a location | Drag it / drag a corner of the selected location |
+   | Redraw the selected location | Ctrl+drag |
    | Set the click point (red cross) | Shift+click inside the selected location (default: center) |
    | Delete the selected location | Delete key |
-   | Rename / set the match threshold | Locations panel on the right |
+   | Zoom / pan | Mouse wheel / middle-drag or Space+drag; **Fit** (Ctrl+0), **100%** (Ctrl+1) |
+   | Rename / threshold / colors | Locations panel on the right |
    | Save / cancel | Enter / Esc |
 
 5. Give the screen a name, check the default delay before clicks, and click **Save**.
 
 Draw each rectangle around a distinctive part of the element (a button with its label rather than a
-plain background), and avoid areas that change often (counters, timers, animations).
+plain background), and avoid areas that change often (counters, timers, animations). Check
+**Colors** for a location whose color matters, for example a button that is greyed out when it cannot
+be used.
 
-Use **Edit** (or double-click) to reopen a screen and **Delete** to remove it.
+Use **Edit** (or double-click) to reopen a screen, **Re-capture** to capture it again after the
+application changed (locations found in the new capture are moved automatically, the others are shown
+in red for you to check), and **Delete** to remove it.
+
+**Quick capture**: once a target area is known for the profile, press **Ctrl+Shift+F9** while
+playing to capture it without leaving the game (a sound confirms it). The captures appear under
+**Pending captures** in the main window: **Annotate…** opens them in the screen editor,
+**Discard** deletes them.
 
 ### 3. Build a sequence
 
 1. Click **New sequence**, type a name and a repeat count (0 = repeat until stopped).
 2. In the **Add a step** panel, pick a screen, then a location, and click **Add step** (or
-   double-click the location). The step is inserted after the selected step.
-3. Reorder with **Move up** / **Move down** (Alt+Up / Alt+Down), **Duplicate** (Ctrl+D) or **Delete**.
+   double-click the location). **Add wait** inserts a pause, and **Run another sequence** inserts a
+   step that runs another sequence of the profile. Steps are inserted after the selected step.
+3. Reorder by drag and drop, or with **Move up** / **Move down** (Alt+Up / Alt+Down); **Duplicate**
+   (Ctrl+D) or **Delete** a step.
 4. For the selected step, you can set a custom delay, disable the verification, or set a custom
    verification timeout (useful after a long loading screen).
-5. Click **Save**.
+5. **Test** (F6) checks that the location of the selected step is found on the screen right now,
+   without clicking. **Run from here** (F5) saves the sequence and runs it from the selected step.
+6. To run the sequence automatically, check **Start automatically at**, type a time and choose the
+   days (none = every day).
+7. Click **Save**.
 
 ### 4. Run a sequence
 
 1. Display the first screen of the sequence in the target application.
-2. Select the sequence and click **Run**. The blue overlay reappears at the last position used:
+2. Select the sequence and click **▶ Run**. The blue overlay reappears at the last position used:
    adjust it if the application moved or was resized, then click **Start**.
 3. A small status window, placed beside the target area, shows the progress and the match score of
    each click.
 
 | Control | Effect |
 |---|---|
-| **F12** (from any window) or **Stop** | Stops the run |
+| **F12** or **Esc** (from any window) or **Stop** | Stops the run |
 | Moving the mouse | Pauses the run before the next click |
 | **Resume** | Continues from the interrupted step (a failed step is retried) |
 | **View capture** | After a failure, opens the capture with the expected position in red |
 | **Close** | Returns to the main window |
 
+The main window then shows the outcome of the run next to the sequence (✔ completed, ✖ failed…).
+
 While a sequence runs, AutoPlay moves the real mouse: do not use the PC (other than to stop or pause
 the run), and keep the target application visible and the session unlocked.
 
-### Tuning
+**Scheduled runs** start only while AutoPlay is open and idle, without the overlay, on the last target
+area used by the profile: run the sequence once by hand first, and keep the application at the same
+place on the screen.
+
+### Settings
+
+**File > Settings…** sets the theme (system, light or dark), whether Esc stops a run (F12 always
+does), the quick capture shortcut, the data folder, and the defaults of the selected profile:
 
 - **Match threshold** (0 to 1, default 0.8): the minimum similarity required to click. Lower it for
   a location that often fails because of visual effects; raise it if a similar element is clicked by
-  mistake. The score of each click is shown in the status window.
-- **Delays**: increase the delay before a click when the previous action triggers an animation or a
-  loading screen; the verification timeout (default 10 s) is the maximum wait for the element.
-- **Profile defaults** (threshold, verification timeout, retry interval, search margin, mouse
-  tolerance) have no editing screen yet: they can be changed in the profile's `profile.json` file
-  while AutoPlay is closed.
+  mistake. The score of each click is shown in the status window and by **Test**. A location can also
+  have its own threshold, in the screen editor.
+- **Verification timeout** (default 10 s): the maximum wait for an element before a click; increase
+  the delay before a click when the previous action triggers an animation or a loading screen.
+- **Retry interval**, **search margin** (how far from its recorded position an element is looked
+  for) and **mouse tolerance** (how far the mouse may move before the run pauses).
 
-### Data and logs
+### Data, export and logs
 
-Everything is stored in `%LOCALAPPDATA%\AutoPlay\Profiles`, one folder per profile, as JSON and PNG
-files (see the [specification](docs/specification.md#6-data-model-and-storage)). Captures of failed
-verifications are saved in each profile's `logs` folder. Back up this folder to keep your profiles.
-The JSON format is versioned (`schemaVersion`) and described by JSON Schemas in
-[docs/schemas](docs/schemas).
+Profiles are stored in `%LOCALAPPDATA%\AutoPlay\Profiles` (or the folder chosen in the settings),
+one folder per profile, as JSON and PNG files (see the
+[specification](docs/specification.md#6-data-model-and-storage)). Captures of failed verifications
+are saved in each profile's `logs` folder. The JSON format is versioned (`schemaVersion`) and
+described by JSON Schemas in [docs/schemas](docs/schemas).
+
+- **File > Export profile…** saves the selected profile (screens, images, sequences) as a `.zip`
+  file, for a backup or to share it.
+- **File > Open data folder** and **Open logs folder** open the folders in the Explorer. The
+  application log (`%LOCALAPPDATA%\AutoPlay\Logs`, one file per day, kept 14 days) records every run;
+  attach it when reporting a problem.
+
+Only one instance of AutoPlay can run at a time.
 
 ### Troubleshooting
 
 | Problem | Solution |
 |---|---|
 | Clicks are slightly off | Make sure the overlay exactly covers the same area as when recording. |
-| A location is never found | Open **View capture**: if the element is visible but the score is low, lower the threshold or re-record the location around a more distinctive area. |
-| F12 does nothing | Another application already uses F12: the status window says so. Use **Stop** or move the mouse. |
+| A location is never found | Use **Test** in the sequence editor, or open **View capture** after a failure: if the element is visible but the score is low, lower the threshold, redraw the location around a more distinctive area, or re-capture the screen. |
+| Everything fails after a game update | **Re-capture** the screens: the locations are re-positioned automatically. |
+| F12 or Esc does nothing | Another application already uses the key: the status window says so. Use **Stop** or move the mouse. |
+| The quick capture shortcut does nothing | Another application uses it (the status bar says so): choose another one in the settings. A target area must be known: record a screen or run a sequence first. |
+| A scheduled run did not start | AutoPlay must be open and idle; the status bar says why a run was skipped. |
 | The run stops when the PC locks | Capture and clicks do not work on a locked session: disable the automatic lock while running. |
 
 ## Development
@@ -156,21 +206,23 @@ dotnet test AutoPlay.slnx
 ```
 
 The code follows a **hexagonal architecture** (ports and adapters): see
-[docs/architecture.md](docs/architecture.md). The Domain, Application, Persistence and Vision projects
-(and their tests) are cross-platform; the Windows adapter and the App build on any OS
+[docs/architecture.md](docs/architecture.md). The Domain, Application, Persistence, Vision and
+Presentation projects (and their tests) are cross-platform; the Windows adapter and the App build on any OS
 (`EnableWindowsTargeting`) but run only on Windows. Warnings are treated as errors. A GitHub Actions
 workflow builds and tests the solution on Windows for every pull request.
 
 | Project | Description |
 |---|---|
-| `src/AutoPlay.Domain` | Model and business rules (coordinates, rectangle editing, screen and sequence validation). No dependency. |
-| `src/AutoPlay.Application` | Use cases, sequence engine and the ports they need. Depends only on the Domain. |
-| `src/AutoPlay.Adapters.Persistence` | JSON/PNG file storage of profiles, screens, sequences and logs. |
+| `src/AutoPlay.Domain` | Model and business rules (coordinates, rectangle editing, screen and sequence validation, sequence expansion). No dependency. |
+| `src/AutoPlay.Application` | Use cases, sequence engine, settings and the ports they need. Depends only on the Domain (and the logging abstractions). |
+| `src/AutoPlay.Adapters.Persistence` | JSON/PNG file storage of profiles, screens, sequences, run history and settings; zip export. |
 | `src/AutoPlay.Adapters.Vision` | Template matching with OpenCvSharp. |
 | `src/AutoPlay.Adapters.Windows` | Win32 screen capture, mouse input, power requests, global hotkeys, window geometry and clock. |
-| `src/AutoPlay.App` | WPF application (user interface) and composition root. |
+| `src/AutoPlay.Presentation` | View models, without WPF, so that they are unit tested on any OS. |
+| `src/AutoPlay.App` | WPF application (views) and composition root. |
 | `tests/AutoPlay.*.Tests` | Unit tests of each layer and adapter. |
 | `tests/AutoPlay.ArchitectureTests` | Checks the dependency rules of the architecture. |
+| `tests/AutoPlay.TestDoubles` | Fakes of the ports shared by the tests. |
 
 ## Documentation
 

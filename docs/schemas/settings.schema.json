@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/victor-duc/auto-play/docs/schemas/settings.schema.json",
+  "title": "AutoPlay settings",
+  "description": "settings.json (in %LOCALAPPDATA%\\AutoPlay): settings of the application, shared by all profiles.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "theme", "stopWithEscape", "quickCaptureEnabled", "quickCaptureHotkey", "dataFolder"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of the file format.",
+      "const": 2
+    },
+    "theme": {
+      "description": "Color theme: follows Windows, or forced light or dark.",
+      "enum": ["System", "Light", "Dark"]
+    },
+    "stopWithEscape": {
+      "description": "Whether Esc stops a run (F12 always does).",
+      "type": "boolean"
+    },
+    "quickCaptureEnabled": {
+      "description": "Whether the quick capture shortcut is active.",
+      "type": "boolean"
+    },
+    "quickCaptureHotkey": {
+      "description": "Shortcut of the quick capture, e.g. Ctrl+Shift+F9.",
+      "type": "string"
+    },
+    "dataFolder": {
+      "description": "Folder of the profiles; null for %LOCALAPPDATA%\\AutoPlay\\Profiles.",
+      "type": ["string", "null"]
+    }
+  }
+}

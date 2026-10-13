@@ -1,2 +1,4 @@
-* text=auto
+# Text files are stored with LF in the repository and checked out with CRLF, matching .editorconfig.
+* text=auto eol=crlf
 *.png binary
+*.zip binary

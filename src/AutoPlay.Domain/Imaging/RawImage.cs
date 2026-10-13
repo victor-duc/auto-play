@@ -56,6 +56,57 @@ public sealed class RawImage
         return new RawImage(area.Width, area.Height, result);
     }
 
+    /// <summary>
+    /// Returns a reduced copy that fits in <paramref name="maxWidth"/> × <paramref name="maxHeight"/>, keeping the
+    /// proportions; each pixel is the average of the source pixels it covers. Returns this image if it already fits.
+    /// </summary>
+    public RawImage ScaleDown(int maxWidth, int maxHeight)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxHeight);
+        var scale = Math.Min((double)maxWidth / Width, (double)maxHeight / Height);
+        if (scale >= 1)
+        {
+            return this;
+        }
+
+        var width = Math.Max(1, (int)Math.Round(Width * scale));
+        var height = Math.Max(1, (int)Math.Round(Height * scale));
+        var result = new byte[width * height * BytesPerPixel];
+        Span<int> sums = stackalloc int[BytesPerPixel];
+        for (var y = 0; y < height; y++)
+        {
+            var top = y * Height / height;
+            var bottom = Math.Max(top + 1, (y + 1) * Height / height);
+            for (var x = 0; x < width; x++)
+            {
+                var left = x * Width / width;
+                var right = Math.Max(left + 1, (x + 1) * Width / width);
+                sums.Clear();
+                for (var sy = top; sy < bottom; sy++)
+                {
+                    for (var sx = left; sx < right; sx++)
+                    {
+                        var i = sy * Stride + sx * BytesPerPixel;
+                        for (var c = 0; c < BytesPerPixel; c++)
+                        {
+                            sums[c] += Pixels[i + c];
+                        }
+                    }
+                }
+
+                var count = (bottom - top) * (right - left);
+                var o = (y * width + x) * BytesPerPixel;
+                for (var c = 0; c < BytesPerPixel; c++)
+                {
+                    result[o + c] = (byte)(sums[c] / count);
+                }
+            }
+        }
+
+        return new RawImage(width, height, result);
+    }
+
     /// <summary>Returns a copy with the outline of a rectangle drawn on it, clipped to the image.</summary>
     public RawImage WithRectangle(PixelRect rect, byte red, byte green, byte blue, int thickness = 2)
     {

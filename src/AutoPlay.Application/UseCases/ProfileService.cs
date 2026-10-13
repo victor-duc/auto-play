@@ -1,12 +1,19 @@
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AutoPlay.Application.UseCases;
 
 /// <summary>Use cases on profiles.</summary>
-public sealed class ProfileService(IProfileRepository profiles)
+public sealed class ProfileService(
+    IProfileRepository profiles,
+    IProfileArchive? archive = null,
+    ILogger<ProfileService>? logger = null)
 {
+    private readonly ILogger _logger = (ILogger?)logger ?? NullLogger.Instance;
+
     public IReadOnlyList<Profile> GetProfiles() => profiles.LoadProfiles();
 
     /// <summary>Creates a profile; the name is required and must be unique (ignoring case and surrounding spaces).</summary>
@@ -31,7 +38,52 @@ public sealed class ProfileService(IProfileRepository profiles)
         }
         catch (PersistenceException ex)
         {
+            UseCaseLog.StorageError(_logger, ex);
             return OperationResult.Failure<Profile>(ex.Message);
+        }
+    }
+
+    /// <summary>Exports the profile (screens, images, sequences, without logs) to a .zip file.</summary>
+    public OperationResult ExportProfile(Guid profileId, string destinationPath)
+    {
+        if (archive is null)
+        {
+            return OperationResult.Failure("Export is not available.");
+        }
+
+        try
+        {
+            archive.ExportProfile(profileId, destinationPath);
+            return OperationResult.Success();
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+            return OperationResult.Failure(ex.Message);
+        }
+    }
+
+    /// <summary>Validates and saves the default execution settings of a profile.</summary>
+    public OperationResult UpdateDefaults(Profile profile, ProfileDefaults defaults)
+    {
+        var errors = defaults.Validate();
+        if (errors.Count > 0)
+        {
+            return OperationResult.Failure(errors);
+        }
+
+        var previous = profile.Defaults;
+        profile.Defaults = defaults;
+        try
+        {
+            profiles.SaveProfile(profile);
+            return OperationResult.Success();
+        }
+        catch (PersistenceException ex)
+        {
+            profile.Defaults = previous;
+            UseCaseLog.StorageError(_logger, ex);
+            return OperationResult.Failure(ex.Message);
         }
     }
 

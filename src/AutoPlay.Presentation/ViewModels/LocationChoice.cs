@@ -1,0 +1,21 @@
+using AutoPlay.Domain.Imaging;
+using AutoPlay.Domain.Model;
+
+namespace AutoPlay.Presentation.ViewModels;
+
+/// <summary>A location that can be added to a sequence, with its template image.</summary>
+public sealed record LocationChoice(Screen Screen, Location Location, RawImage? Thumbnail)
+{
+    public string Name => Location.Name;
+
+    public string FullName => $"{Screen.Name} / {Location.Name}";
+}
+
+/// <summary>A screen and its locations, as offered in the "Add a step" panel.</summary>
+public sealed record ScreenChoice(Screen Screen, IReadOnlyList<LocationChoice> Locations)
+{
+    public string Name => Screen.Name;
+}
+
+/// <summary>A sequence that can be run by another one.</summary>
+public sealed record SequenceChoice(Guid Id, string Name);

@@ -72,6 +72,26 @@ public class SequenceValidatorTests
     }
 
     [Fact]
+    public void Wait_steps_need_a_duration_but_no_location()
+    {
+        var valid = SequenceStep.Wait(new DelayRange(100, 200));
+        var withoutDuration = new SequenceStep { Kind = StepKind.Wait };
+
+        var errors = SequenceValidator.Validate("S", 1, [valid, withoutDuration], [_screen], []);
+
+        Assert.Equal(["The wait of step 2 needs a duration."], errors);
+    }
+
+    [Fact]
+    public void Wait_steps_do_not_use_a_screen()
+    {
+        var wait = SequenceStep.Wait(new DelayRange(1, 1));
+        wait.ScreenId = _screen.Id;
+
+        Assert.Empty(SequenceValidator.FindUsages([new Sequence { Name = "S", Steps = [wait] }], _screen.Id));
+    }
+
+    [Fact]
     public void FindUsages_returns_the_sequences_using_a_screen()
     {
         var user = new Sequence { Name = "Uses it", Steps = [Step()] };

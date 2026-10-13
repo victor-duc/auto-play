@@ -3,12 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AutoPlay.App.ViewModels"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:ScreenEditorViewModel}"
         Title="{Binding Title}" Width="1200" Height="800" MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
-        PreviewKeyDown="OnPreviewKeyDown" Closing="OnClosing">
+        PreviewKeyDown="OnPreviewKeyDown" PreviewKeyUp="OnPreviewKeyUp" Closing="OnClosing">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
         <SolidColorBrush x:Key="LocationBrush" Color="#FF00BFFF" />
@@ -17,8 +17,8 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1"
-                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource PanelBrush}">
             <StackPanel>
                 <WrapPanel>
                     <TextBlock Text="Screen name" VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -31,11 +31,25 @@
                     <TextBox Width="60" Margin="0,0,20,0" VerticalContentAlignment="Center" ToolTip="Maximum"
                              Text="{Binding DelayMaxMs, UpdateSourceTrigger=PropertyChanged}" />
                     <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True" ToolTip="Save (Enter)" />
-                    <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" Margin="0,0,20,0" />
+                    <Button Content="Fit" Click="OnFitClick" ToolTip="Fit the capture to the window (Ctrl+0)" />
+                    <Button Content="100%" Click="OnActualSizeClick" ToolTip="Show the capture at its actual size (Ctrl+1)" />
+                    <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="6,0,0,0" MinWidth="44" Foreground="{StaticResource HintBrush}" />
                 </WrapPanel>
-                <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Shift+click inside the selected location to set its click point · Delete removes the selected location" />
-                <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap" Text="{Binding ErrorMessage}">
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
+                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Ctrl+drag to redraw the selected location · Shift+click inside the selected location to set its click point · Delete removes the selected location · Mouse wheel zooms · Middle-drag or Space+drag pans" />
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource InfoBrush}" TextWrapping="Wrap" Text="{Binding InfoMessage}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" Text="{Binding ErrorMessage}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
@@ -53,7 +67,7 @@
         </Border>
 
         <!-- Locations panel -->
-        <Border DockPanel.Dock="Right" Width="330" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
+        <Border DockPanel.Dock="Right" Width="380" Padding="12" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}"
                            Text="{Binding Locations.Count, StringFormat='Locations ({0})'}" />
@@ -61,13 +75,15 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="68" />
+                        <ColumnDefinition Width="50" />
                         <ColumnDefinition Width="28" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Name" Foreground="Gray" />
-                    <TextBlock Grid.Column="1" Text="Threshold" Foreground="Gray" Margin="6,0,0,0" />
+                    <TextBlock Text="Name" Foreground="{StaticResource HintBrush}" />
+                    <TextBlock Grid.Column="1" Text="Threshold" Foreground="{StaticResource HintBrush}" Margin="6,0,0,0" />
+                    <TextBlock Grid.Column="2" Text="Colors" Foreground="{StaticResource HintBrush}" HorizontalAlignment="Center" />
                 </Grid>
-                <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Threshold: minimum similarity, from 0 to 1, required to click the location. Leave empty to use the profile default (0.8)." />
+                <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
+                           Text="Threshold: minimum similarity, from 0 to 1, required to click the location. Leave empty to use the profile default (0.8). Colors: also compare colors, not only shapes (e.g. to tell an enabled button from a greyed-out one)." />
                 <ListBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SelectedLocation}"
                          HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
@@ -86,12 +102,15 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="68" />
+                                    <ColumnDefinition Width="50" />
                                     <ColumnDefinition Width="28" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Location name" />
                                 <TextBox Grid.Column="1" Margin="6,0,6,0" ToolTip="Match threshold (empty = profile default)"
                                          Text="{Binding MatchThresholdText, UpdateSourceTrigger=PropertyChanged}" />
-                                <Button Grid.Column="2" Content="✕" MinWidth="0" Margin="0" Padding="0" ToolTip="Delete this location"
+                                <CheckBox Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          IsChecked="{Binding MatchColors}" ToolTip="Colors must match too, not only shapes" />
+                                <Button Grid.Column="3" Content="✕" MinWidth="0" Margin="0" Padding="0" ToolTip="Delete this location"
                                         Command="{Binding DataContext.DeleteLocationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}" />
                             </Grid>
@@ -101,11 +120,16 @@
             </DockPanel>
         </Border>
 
-        <!-- Capture and locations. Inside the Viewbox, one unit is one capture pixel. -->
-        <Grid Background="#FF2B2B2B" ClipToBounds="True">
-            <Viewbox x:Name="CaptureViewbox" Margin="16" Stretch="Uniform" StretchDirection="DownOnly" SizeChanged="OnViewboxSizeChanged">
-                <Grid x:Name="Surface" Width="{Binding PixelWidth}" Height="{Binding PixelHeight}">
-                    <Image Source="{Binding CaptureBitmap}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+        <!-- Capture and locations. Inside Surface, one unit is one capture pixel; zoom and pan are its render transform. -->
+        <Grid x:Name="Viewport" Background="#FF2B2B2B" ClipToBounds="True" SizeChanged="OnViewportSizeChanged"
+              PreviewMouseWheel="OnViewportMouseWheel" PreviewMouseDown="OnViewportPreviewMouseDown"
+              PreviewMouseMove="OnViewportPreviewMouseMove" PreviewMouseUp="OnViewportPreviewMouseUp">
+                <Grid x:Name="Surface" Width="{Binding PixelWidth}" Height="{Binding PixelHeight}"
+                      HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Grid.RenderTransform>
+                        <MatrixTransform x:Name="SurfaceTransform" />
+                    </Grid.RenderTransform>
+                    <Image x:Name="CaptureImage" Source="{Binding Capture, Converter={StaticResource RawImageToBitmap}}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
 
                     <ItemsControl ItemsSource="{Binding Locations}" IsHitTestVisible="False">
                         <ItemsControl.ItemsPanel>
@@ -141,6 +165,11 @@
                                     </Path>
                                 </Canvas>
                                 <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding NeedsReview}" Value="True">
+                                        <Setter TargetName="Frame" Property="Stroke" Value="Red" />
+                                        <Setter TargetName="Frame" Property="Fill" Value="#33FF0000" />
+                                        <Setter TargetName="Label" Property="Background" Value="#CCFF4040" />
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                         <Setter TargetName="Frame" Property="Stroke" Value="{StaticResource SelectedLocationBrush}" />
                                         <Setter TargetName="Frame" Property="Fill" Value="#33FF8C00" />
@@ -161,7 +190,6 @@
                                    StrokeDashArray="4 2" StrokeThickness="{Binding StrokeThickness}" />
                     </Canvas>
                 </Grid>
-            </Viewbox>
         </Grid>
     </DockPanel>
 </Window>

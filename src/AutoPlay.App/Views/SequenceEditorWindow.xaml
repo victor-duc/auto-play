@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AutoPlay.App.ViewModels"
+        xmlns:vm="clr-namespace:AutoPlay.Presentation.ViewModels;assembly=AutoPlay.Presentation"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:SequenceEditorViewModel}"
         Title="{Binding Title}" Width="1100" Height="720" MinWidth="820" MinHeight="500"
@@ -11,7 +11,7 @@
         PreviewKeyDown="OnPreviewKeyDown" Closing="OnClosing">
     <Window.Resources>
         <Style x:Key="ErrorText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="Firebrick" />
+            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
             <Style.Triggers>
                 <Trigger Property="Text" Value="">
@@ -34,8 +34,8 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1"
-                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource PanelBrush}">
             <StackPanel>
                 <WrapPanel>
                     <TextBlock Text="Sequence name" Style="{StaticResource FieldLabel}" />
@@ -44,28 +44,62 @@
                     <TextBlock Text="Repeat" Style="{StaticResource FieldLabel}" />
                     <TextBox Style="{StaticResource NumberBox}" Text="{Binding RepeatCountText, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Number of times the steps are executed; 0 = until stopped" />
-                    <TextBlock Text="time(s) — 0 = until stopped" Foreground="Gray" Style="{StaticResource FieldLabel}" Margin="6,0,20,0" />
+                    <TextBlock Text="time(s) — 0 = until stopped" Foreground="{StaticResource HintBrush}" Style="{StaticResource FieldLabel}" Margin="6,0,20,0" />
                     <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True" ToolTip="Save (Enter)" />
                     <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
+                </WrapPanel>
+                <WrapPanel Margin="0,8,0,0">
+                    <CheckBox Content="Start automatically at" VerticalAlignment="Center" IsChecked="{Binding ScheduleEnabled}"
+                              ToolTip="While AutoPlay is running, on the last target area used by this profile" />
+                    <TextBox Style="{StaticResource NumberBox}" Margin="6,0,12,0" Text="{Binding ScheduleTimeText, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding ScheduleEnabled}" ToolTip="Time of the day, e.g. 08:30" />
+                    <ItemsControl ItemsSource="{Binding Days}" IsEnabled="{Binding ScheduleEnabled}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:DayToggle}">
+                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,0,8,0" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="(no day checked = every day)" Foreground="{StaticResource HintBrush}" VerticalAlignment="Center" />
                 </WrapPanel>
                 <TextBlock Margin="0,6,0,0" Style="{StaticResource ErrorText}" Text="{Binding ErrorMessage}" />
             </StackPanel>
         </Border>
 
         <!-- Add a step -->
-        <Border DockPanel.Dock="Right" Width="320" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
+        <Border DockPanel.Dock="Right" Width="340" Padding="12" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Text="Add a step" />
-                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4" Text="Screen" Foreground="Gray" />
+                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4" Text="Screen" Foreground="{StaticResource HintBrush}" />
                 <ComboBox x:Name="ScreenComboBox" DockPanel.Dock="Top" ItemsSource="{Binding ScreenChoices}" SelectedItem="{Binding SelectedScreenChoice}"
                           DisplayMemberPath="Name" IsEnabled="{Binding HasScreens}" />
-                <TextBlock DockPanel.Dock="Top" Margin="0,8,0,4" Text="Location" Foreground="Gray" />
+                <TextBlock DockPanel.Dock="Top" Margin="0,8,0,4" Text="Location" Foreground="{StaticResource HintBrush}" />
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Run another sequence" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Add" Margin="8,0,0,0" MinWidth="60" Command="{Binding AddRunSequenceCommand}"
+                                ToolTip="Insert a step that runs the chosen sequence, with its repeat count" />
+                        <ComboBox ItemsSource="{Binding SequenceChoices}" SelectedItem="{Binding SelectedSequenceChoice}"
+                                  DisplayMemberPath="Name" IsEnabled="{Binding HasOtherSequences}" />
+                    </DockPanel>
+                    <TextBlock Margin="0,4,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
+                               Text="The other sequence runs all its steps, as many times as its repeat count, then this one continues." />
+                </StackPanel>
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                    <Button HorizontalAlignment="Left" Margin="0" Content="Add step" Command="{Binding AddStepCommand}"
+                    <StackPanel Orientation="Horizontal">
+                    <Button Content="Add step" Command="{Binding AddStepCommand}"
                             ToolTip="Insert the location after the selected step (double-click a location)" />
-                    <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
+                        <Button Content="Add wait" Command="{Binding AddWaitCommand}" Margin="0"
+                                ToolTip="Insert a pause of 1 second (adjustable) after the selected step" />
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
                                Text="The step is inserted after the selected step, or at the end if no step is selected." />
-                    <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap"
+                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
                                Text="This profile has no screen yet: record a screen first."
                                Visibility="{Binding HasScreens, Converter={StaticResource InverseBooleanToVisibility}}" />
                 </StackPanel>
@@ -74,8 +108,8 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:LocationChoice}">
                             <StackPanel Orientation="Horizontal" Margin="0,3">
-                                <Border Width="72" Height="40" Margin="0,0,8,0" Background="#11000000">
-                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                <Border Width="112" Height="64" Margin="0,0,8,0" Background="{StaticResource ThumbnailBrush}">
+                                    <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
                                 </Border>
                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
@@ -91,19 +125,50 @@
                 <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"
                            Text="{Binding Steps.Count, StringFormat='Steps ({0})'}" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Move up" Command="{Binding MoveUpCommand}" ToolTip="Alt+Up" />
+                    <Button Content="Test" Command="{Binding TestStepCommand}"
+                            ToolTip="Look for the location of the selected step on the screen now, without clicking (F6)" />
+                    <Button Content="Run from here" Command="{Binding RunFromStepCommand}" Margin="0,0,16,0"
+                            ToolTip="Save the sequence, then run it starting at the selected step (F5)" />
+                    <Button Content="Move up" Command="{Binding MoveUpCommand}" ToolTip="Alt+Up (or drag the step)" />
                     <Button Content="Move down" Command="{Binding MoveDownCommand}" ToolTip="Alt+Down" />
                     <Button Content="Duplicate" Command="{Binding DuplicateStepCommand}" ToolTip="Ctrl+D" />
                     <Button Content="Delete" Command="{Binding DeleteStepCommand}" ToolTip="Delete" Margin="0" />
                 </StackPanel>
             </DockPanel>
 
+            <!-- Result of "Test" -->
+            <Border DockPanel.Dock="Top" Margin="0,0,0,6" Padding="8,4" CornerRadius="4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{StaticResource SuccessTintBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TestPassed}" Value="False">
+                                <Setter Property="Background" Value="{StaticResource ErrorTintBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding TestMessage}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="{Binding TestMessage}" TextWrapping="Wrap" />
+            </Border>
+
             <!-- Settings of the selected step -->
             <GroupBox DockPanel.Dock="Bottom" Margin="0,8,0,0" Padding="8" DataContext="{Binding SelectedStep}"
                       Header="{Binding Number, StringFormat='Step {0} settings', FallbackValue='Step settings'}"
                       IsEnabled="{Binding DataContext.SelectedStep, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NotNullToBoolean}}">
                 <StackPanel>
-                    <WrapPanel Margin="0,0,0,6">
+                    <TextBlock Visibility="{Binding IsRunSequence, Converter={StaticResource BooleanToVisibility}}" TextWrapping="Wrap"
+                               Text="This step runs another sequence: edit that sequence to change its steps or its repeat count." />
+                    <WrapPanel Visibility="{Binding IsWait, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Text="Wait between" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMinMs, UpdateSourceTrigger=PropertyChanged}" ToolTip="Minimum (ms)" />
+                        <TextBlock Text="and" Margin="6,0" VerticalAlignment="Center" />
+                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMaxMs, UpdateSourceTrigger=PropertyChanged}" ToolTip="Maximum (ms)" />
+                        <TextBlock Text="ms (a random duration in this range)" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,0,0,6" Visibility="{Binding IsClick, Converter={StaticResource BooleanToVisibility}}">
                         <CheckBox Content="Custom delay before click" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="{Binding OverrideDelay}" />
                         <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMinMs, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding OverrideDelay}" ToolTip="Minimum (ms)" />
@@ -112,7 +177,7 @@
                                  IsEnabled="{Binding OverrideDelay}" ToolTip="Maximum (ms)" />
                         <TextBlock Text="ms" Margin="6,0,0,0" VerticalAlignment="Center" />
                     </WrapPanel>
-                    <WrapPanel>
+                    <WrapPanel Visibility="{Binding IsClick, Converter={StaticResource BooleanToVisibility}}">
                         <CheckBox Content="Verify the location before clicking" VerticalAlignment="Center" Margin="0,0,24,0" IsChecked="{Binding Verify}" />
                         <CheckBox Content="Custom timeout" VerticalAlignment="Center" Margin="0,0,12,0"
                                   IsChecked="{Binding OverrideTimeout}" IsEnabled="{Binding Verify}" />
@@ -130,8 +195,22 @@
                 </StackPanel>
             </GroupBox>
 
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource EmptyStateText}"
+                       Visibility="{Binding Steps.Count, Converter={StaticResource EmptyToVisible}}"
+                       Text="No step yet. Pick a screen and a location on the right, then click Add step (or double-click the location). Add waits and other sequences the same way." />
             <ListBox x:Name="StepsList" ItemsSource="{Binding Steps}" SelectedItem="{Binding SelectedStep}"
-                     HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                     HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AllowDrop="True" PreviewMouseLeftButtonDown="OnStepsPreviewMouseLeftButtonDown"
+                     PreviewMouseMove="OnStepsPreviewMouseMove" DragOver="OnStepsDragOver" Drop="OnStepsDrop">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="_Test this step" Command="{Binding TestStepCommand}" InputGestureText="F6" />
+                        <MenuItem Header="_Run from this step" Command="{Binding RunFromStepCommand}" InputGestureText="F5" />
+                        <Separator />
+                        <MenuItem Header="_Duplicate" Command="{Binding DuplicateStepCommand}" InputGestureText="Ctrl+D" />
+                        <MenuItem Header="De_lete" Command="{Binding DeleteStepCommand}" InputGestureText="Delete" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:StepViewModel}">
                         <Grid Margin="0,3">
@@ -141,17 +220,23 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
-                            <Border Grid.Column="1" Width="72" Height="40" Margin="0,0,10,0" Background="#11000000">
-                                <Image Source="{Binding Thumbnail}" Stretch="Uniform" StretchDirection="DownOnly" />
+                            <Border Grid.Column="1" Width="112" Height="64" Margin="0,0,10,0" Background="{StaticResource ThumbnailBrush}">
+                                <Grid>
+                                    <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                    <TextBlock Text="⏱" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding IsWait, Converter={StaticResource BooleanToVisibility}}" />
+                                    <TextBlock Text="↻" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding IsRunSequence, Converter={StaticResource BooleanToVisibility}}" />
+                                </Grid>
                             </Border>
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="StepTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Summary}" Foreground="Gray" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Summary}" Foreground="{StaticResource HintBrush}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Grid>
                         <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                <Setter TargetName="StepTitle" Property="Foreground" Value="Firebrick" />
+                                <Setter TargetName="StepTitle" Property="Foreground" Value="{StaticResource ErrorBrush}" />
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>

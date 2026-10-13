@@ -132,6 +132,42 @@ public sealed class FileProfileStoreTests : IDisposable
     }
 
     [Fact]
+    public void Export_writes_the_profile_without_its_logs_history_and_pending_captures()
+    {
+        var profile = new Profile { Name = "Game" };
+        _store.SaveProfile(profile);
+        var location = new Location { Name = "A", Bounds = new NormalizedRect(0, 0, 0.5, 0.5), ClickPoint = new NormalizedPoint(0.25, 0.25) };
+        var screen = new Screen { Name = "Map", RecordedRegionSize = new PixelSize(4, 4), Locations = [location] };
+        _store.SaveScreen(profile.Id, screen, TestImages.Solid(4, 4), new Dictionary<Guid, RawImage> { [location.Id] = TestImages.Solid(2, 2) });
+        var sequence = new Sequence { Name = "Raids" };
+        _store.SaveSequence(profile.Id, sequence);
+        _store.SaveLogImage(profile.Id, "failure", TestImages.Solid(2, 2));
+        _store.SavePendingCapture(profile.Id, new PendingCapture(Guid.NewGuid(), DateTimeOffset.UtcNow), TestImages.Solid(2, 2));
+        _store.SaveLastRun(profile.Id, new AutoPlay.Application.Execution.RunSummary { SequenceId = sequence.Id });
+        var destination = Path.Combine(_root, "export.zip");
+
+        _store.ExportProfile(profile.Id, destination);
+
+        using var archive = System.IO.Compression.ZipFile.OpenRead(destination);
+        Assert.Equal(
+            [
+                "profile.json",
+                $"screens/{screen.Id}/capture.png",
+                $"screens/{screen.Id}/locations/{location.Id}.png",
+                $"screens/{screen.Id}/screen.json",
+                $"sequences/{sequence.Id}.json",
+            ],
+            archive.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
+        Assert.False(File.Exists(destination + ".tmp"));
+    }
+
+    [Fact]
+    public void Export_of_an_unknown_profile_is_a_persistence_error()
+    {
+        Assert.Throws<PersistenceException>(() => _store.ExportProfile(Guid.NewGuid(), Path.Combine(_root, "x.zip")));
+    }
+
+    [Fact]
     public void Corrupted_json_is_reported_as_a_persistence_error()
     {
         var profile = new Profile { Name = "Broken" };
@@ -147,5 +183,38 @@ public sealed class FileProfileStoreTests : IDisposable
     public void Missing_image_is_reported_as_a_persistence_error()
     {
         Assert.Throws<PersistenceException>(() => _store.LoadScreenCapture(Guid.NewGuid(), Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Pending_captures_round_trip()
+    {
+        var profileId = Guid.NewGuid();
+        var capture = new PendingCapture(Guid.NewGuid(), new DateTimeOffset(2026, 3, 4, 5, 6, 7, 890, TimeSpan.Zero));
+
+        _store.SavePendingCapture(profileId, capture, TestImages.Solid(3, 2));
+
+        Assert.Equal(capture, Assert.Single(_store.LoadPendingCaptures(profileId)));
+        Assert.Equal(3, _store.LoadPendingCaptureImage(profileId, capture.Id).Width);
+
+        _store.DeletePendingCapture(profileId, capture.Id);
+
+        Assert.Empty(_store.LoadPendingCaptures(profileId));
+    }
+
+    [Fact]
+    public void Files_not_named_as_pending_captures_are_ignored()
+    {
+        var profileId = Guid.NewGuid();
+        var inbox = Path.Combine(_root, profileId.ToString(), "inbox");
+        Directory.CreateDirectory(inbox);
+        File.WriteAllBytes(Path.Combine(inbox, "holiday.png"), [1]);
+
+        Assert.Empty(_store.LoadPendingCaptures(profileId));
+    }
+
+    [Fact]
+    public void Missing_pending_capture_is_reported_as_a_persistence_error()
+    {
+        Assert.Throws<PersistenceException>(() => _store.LoadPendingCaptureImage(Guid.NewGuid(), Guid.NewGuid()));
     }
 }
