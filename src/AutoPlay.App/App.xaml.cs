@@ -17,9 +17,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoPlay.App;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001", Justification = "Disposed in OnExit, at the end of the application lifetime.")]
 public partial class App : System.Windows.Application
 {
+    /// <summary>Name of the mutex that prevents two instances from writing the same files.</summary>
+    private const string SingleInstanceMutexName = @"Local\AutoPlay.SingleInstance";
+
     private ServiceProvider? _services;
+    private Mutex? _singleInstanceMutex;
 
     /// <summary>Default root folder of the profiles: %LOCALAPPDATA%\AutoPlay\Profiles.</summary>
     public static string DefaultProfilesPath { get; } = Path.Combine(
@@ -28,6 +33,17 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
+        if (!createdNew)
+        {
+            MessageBox.Show("AutoPlay is already running.", "AutoPlay", MessageBoxButton.OK, MessageBoxImage.Information);
+            _singleInstanceMutex.Dispose();
+            _singleInstanceMutex = null;
+            Shutdown();
+            return;
+        }
+
         DispatcherUnhandledException += OnDispatcherUnhandledException;
 
         _services = ConfigureServices().BuildServiceProvider();
@@ -39,6 +55,12 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _services?.Dispose();
+        if (_singleInstanceMutex is not null)
+        {
+            _singleInstanceMutex.ReleaseMutex();
+            _singleInstanceMutex.Dispose();
+        }
+
         base.OnExit(e);
     }
 
