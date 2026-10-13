@@ -8,7 +8,7 @@
         d:DataContext="{d:DesignInstance Type=vm:ScreenEditorViewModel}"
         Title="{Binding Title}" Width="1200" Height="800" MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
-        PreviewKeyDown="OnPreviewKeyDown" Closing="OnClosing">
+        PreviewKeyDown="OnPreviewKeyDown" PreviewKeyUp="OnPreviewKeyUp" Closing="OnClosing">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
         <SolidColorBrush x:Key="LocationBrush" Color="#FF00BFFF" />
@@ -31,10 +31,13 @@
                     <TextBox Width="60" Margin="0,0,20,0" VerticalContentAlignment="Center" ToolTip="Maximum"
                              Text="{Binding DelayMaxMs, UpdateSourceTrigger=PropertyChanged}" />
                     <Button Content="Save" Command="{Binding SaveCommand}" IsDefault="True" ToolTip="Save (Enter)" />
-                    <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" Margin="0,0,20,0" />
+                    <Button Content="Fit" Click="OnFitClick" ToolTip="Fit the capture to the window (Ctrl+0)" />
+                    <Button Content="100%" Click="OnActualSizeClick" ToolTip="Show the capture at its actual size (Ctrl+1)" />
+                    <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="6,0,0,0" MinWidth="44" Foreground="{StaticResource HintBrush}" />
                 </WrapPanel>
                 <TextBlock Margin="0,6,0,0" Foreground="{StaticResource HintBrush}" TextWrapping="Wrap"
-                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Ctrl+drag to redraw the selected location · Shift+click inside the selected location to set its click point · Delete removes the selected location" />
+                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Ctrl+drag to redraw the selected location · Shift+click inside the selected location to set its click point · Delete removes the selected location · Mouse wheel zooms · Middle-drag or Space+drag pans" />
                 <TextBlock Margin="0,6,0,0" Foreground="{StaticResource InfoBrush}" TextWrapping="Wrap" Text="{Binding InfoMessage}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -117,11 +120,16 @@
             </DockPanel>
         </Border>
 
-        <!-- Capture and locations. Inside the Viewbox, one unit is one capture pixel. -->
-        <Grid Background="#FF2B2B2B" ClipToBounds="True">
-            <Viewbox x:Name="CaptureViewbox" Margin="16" Stretch="Uniform" StretchDirection="DownOnly" SizeChanged="OnViewboxSizeChanged">
-                <Grid x:Name="Surface" Width="{Binding PixelWidth}" Height="{Binding PixelHeight}">
-                    <Image Source="{Binding Capture, Converter={StaticResource RawImageToBitmap}}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+        <!-- Capture and locations. Inside Surface, one unit is one capture pixel; zoom and pan are its render transform. -->
+        <Grid x:Name="Viewport" Background="#FF2B2B2B" ClipToBounds="True" SizeChanged="OnViewportSizeChanged"
+              PreviewMouseWheel="OnViewportMouseWheel" PreviewMouseDown="OnViewportPreviewMouseDown"
+              PreviewMouseMove="OnViewportPreviewMouseMove" PreviewMouseUp="OnViewportPreviewMouseUp">
+                <Grid x:Name="Surface" Width="{Binding PixelWidth}" Height="{Binding PixelHeight}"
+                      HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Grid.RenderTransform>
+                        <MatrixTransform x:Name="SurfaceTransform" />
+                    </Grid.RenderTransform>
+                    <Image x:Name="CaptureImage" Source="{Binding Capture, Converter={StaticResource RawImageToBitmap}}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
 
                     <ItemsControl ItemsSource="{Binding Locations}" IsHitTestVisible="False">
                         <ItemsControl.ItemsPanel>
@@ -182,7 +190,6 @@
                                    StrokeDashArray="4 2" StrokeThickness="{Binding StrokeThickness}" />
                     </Canvas>
                 </Grid>
-            </Viewbox>
         </Grid>
     </DockPanel>
 </Window>
