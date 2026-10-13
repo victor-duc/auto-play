@@ -34,7 +34,18 @@
                     <Button Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel (Esc)" />
                 </WrapPanel>
                 <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Shift+click inside the selected location to set its click point · Delete removes the selected location" />
+                           Text="Drag on the capture to draw a location · Click to create a default-size location · Drag a location to move it, or a corner to resize it · Ctrl+drag to redraw the selected location · Shift+click inside the selected location to set its click point · Delete removes the selected location" />
+                <TextBlock Margin="0,6,0,0" Foreground="SteelBlue" TextWrapping="Wrap" Text="{Binding InfoMessage}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap" Text="{Binding ErrorMessage}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -146,6 +157,11 @@
                                     </Path>
                                 </Canvas>
                                 <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding NeedsReview}" Value="True">
+                                        <Setter TargetName="Frame" Property="Stroke" Value="Red" />
+                                        <Setter TargetName="Frame" Property="Fill" Value="#33FF0000" />
+                                        <Setter TargetName="Label" Property="Background" Value="#CCFF4040" />
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                         <Setter TargetName="Frame" Property="Stroke" Value="{StaticResource SelectedLocationBrush}" />
                                         <Setter TargetName="Frame" Property="Fill" Value="#33FF8C00" />

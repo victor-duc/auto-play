@@ -40,6 +40,14 @@ internal sealed class FakeFlows : IScreenRecordingFlow, ISequenceEditingFlow, IS
 
     public bool Edit(Profile profile, Screen screen) => false;
 
+    public List<Screen> Recaptured { get; } = [];
+
+    public Task<bool> RecaptureAsync(Profile profile, Screen screen)
+    {
+        Recaptured.Add(screen);
+        return Task.FromResult(true);
+    }
+
     public bool Edit(Profile profile, Sequence? sequence) => OnEditSequence(profile, sequence);
 
     public List<RunOptions> RunOptions { get; } = [];

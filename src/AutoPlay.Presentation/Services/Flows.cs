@@ -10,6 +10,12 @@ public interface IScreenRecordingFlow
 
     /// <summary>Returns true if the screen was saved.</summary>
     bool Edit(Profile profile, Screen screen);
+
+    /// <summary>
+    /// Captures the screen again (framing first), re-positions its locations on the new capture and opens the editor.
+    /// Returns true if the screen was saved.
+    /// </summary>
+    Task<bool> RecaptureAsync(Profile profile, Screen screen);
 }
 
 /// <summary>Opens the sequence editor.</summary>

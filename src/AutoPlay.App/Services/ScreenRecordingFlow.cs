@@ -44,6 +44,36 @@ public sealed class ScreenRecordingFlow(ScreenService screenService, IUserDialog
         }
     }
 
+    /// <summary>Captures an existing screen again and re-positions its locations. Returns true if it was saved.</summary>
+    public async Task<bool> RecaptureAsync(Profile profile, Screen screen)
+    {
+        using var busy = activity.Begin();
+        var mainWindow = System.Windows.Application.Current.MainWindow;
+        mainWindow.Hide();
+        try
+        {
+            var framing = new FramingWindow(
+                "Capture",
+                $"Display the screen '{screen.Name}' in the application, check that this window covers the target area, then click Capture.",
+                profile.LastTargetRegion);
+            if (framing.ShowDialog() != true || framing.TargetRegion is not { } region)
+            {
+                return false;
+            }
+
+            await Task.Delay(CaptureDelay);
+            var recapture = screenService.Recapture(profile, screen, region);
+            var editor = new ScreenEditorWindow(
+                new ScreenEditorViewModel(screenService, dialogs, profile.Id, recapture.Capture, screen, recapture));
+            return editor.ShowDialog() == true;
+        }
+        finally
+        {
+            mainWindow.Show();
+            mainWindow.Activate();
+        }
+    }
+
     /// <summary>Edits the locations of an existing screen on its stored capture. Returns true if it was saved.</summary>
     public bool Edit(Profile profile, Screen screen)
     {

@@ -18,6 +18,7 @@ public partial class ScreenEditorWindow : Window
     {
         None,
         Create,
+        Redraw,
         Move,
         Resize,
     }
@@ -108,6 +109,17 @@ public partial class ScreenEditorWindow : Window
             return;
         }
 
+        if (selected is not null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            // Ctrl+drag redraws the selected location (re-positioning), keeping its name and settings.
+            var corner = GetEdgePosition(e);
+            StartDrag(DragMode.Redraw, corner, selected);
+            UpdateDraftRectangle(new PixelRect(corner.X, corner.Y, 0, 0));
+            DraftRectangle.Visibility = Visibility.Visible;
+            e.Handled = true;
+            return;
+        }
+
         var handle = selected is null ? RectHandle.None : RectEditing.HitTest(selected.Bounds, point, _viewModel.HandleTolerance);
         if (handle is not (RectHandle.None or RectHandle.Body))
         {
@@ -139,7 +151,7 @@ public partial class ScreenEditorWindow : Window
             case DragMode.None:
                 InputLayer.Cursor = GetHoverCursor(point);
                 break;
-            case DragMode.Create:
+            case DragMode.Create or DragMode.Redraw:
                 UpdateDraftRectangle(RectEditing.FromCorners(_dragStart, GetEdgePosition(e)));
                 break;
             case DragMode.Move:
@@ -161,6 +173,10 @@ public partial class ScreenEditorWindow : Window
                 ? RectEditing.CenteredAt(_dragStart, RectEditing.DefaultLocationSize, _viewModel.CaptureSize)
                 : RectEditing.Normalize(RectEditing.FromCorners(_dragStart, point), _viewModel.CaptureSize);
             _viewModel.AddLocation(bounds);
+        }
+        else if (_dragMode == DragMode.Redraw && !RectEditing.IsClick(_dragStart, GetEdgePosition(e)))
+        {
+            _dragTarget!.RedrawTo(RectEditing.Normalize(RectEditing.FromCorners(_dragStart, GetEdgePosition(e)), _viewModel.CaptureSize));
         }
 
         EndDrag();

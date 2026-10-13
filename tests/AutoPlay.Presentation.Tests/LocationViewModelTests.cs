@@ -47,6 +47,30 @@ public class LocationViewModelTests
         Assert.Equal(new PixelPoint(29, 10), location.ClickPoint);
     }
 
+    [Fact]
+    public void RedrawTo_keeps_the_relative_click_position()
+    {
+        var location = Centered();
+        location.SetClickPoint(new PixelPoint(10, 29));
+
+        location.RedrawTo(new PixelRect(100, 100, 40, 40));
+
+        // Mapped from the pixel center: the first and last of 20 columns become columns 1 and 39 of 40.
+        Assert.Equal(new PixelPoint(101, 139), location.ClickPoint);
+    }
+
+    [Fact]
+    public void Editing_clears_the_review_flag()
+    {
+        var location = Centered();
+        location.NeedsReview = true;
+
+        location.RedrawTo(new PixelRect(0, 0, 10, 10));
+
+        Assert.False(location.NeedsReview);
+        Assert.Equal(new PixelPoint(5, 5), location.ClickPoint);
+    }
+
     [Theory]
     [InlineData("", null)]
     [InlineData("0.9", 0.9)]

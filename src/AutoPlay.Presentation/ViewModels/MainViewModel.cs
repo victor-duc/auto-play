@@ -45,7 +45,7 @@ public sealed partial class MainViewModel(
     public partial Profile? SelectedProfile { get; set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(EditScreenCommand), nameof(DeleteScreenCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditScreenCommand), nameof(RecaptureScreenCommand), nameof(DeleteScreenCommand))]
     public partial Screen? SelectedScreen { get; set; }
 
     [ObservableProperty]
@@ -233,6 +233,21 @@ public sealed partial class MainViewModel(
         {
             ReloadScreens(screen.Id);
             StatusMessage = $"Screen '{SelectedScreen?.Name}' saved.";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedScreen))]
+    private async Task RecaptureScreenAsync()
+    {
+        if (SelectedProfile is not { } profile || SelectedScreen is not { } screen)
+        {
+            return;
+        }
+
+        if (await screenRecording.RecaptureAsync(profile, screen))
+        {
+            ReloadScreens(screen.Id);
+            StatusMessage = $"Screen '{screen.Name}' re-captured.";
         }
     }
 

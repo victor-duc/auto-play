@@ -1,3 +1,4 @@
+using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Model;
@@ -12,10 +13,11 @@ public class ScreenEditorViewModelTests
     private readonly Guid _profileId = Guid.NewGuid();
     private readonly InMemoryRepository _repository = new();
     private readonly FakeDialogs _dialogs = new();
+    private readonly FakeTemplateMatcher _matcher = new(new MatchResult(default, 0));
     private readonly ScreenService _service;
 
     public ScreenEditorViewModelTests() =>
-        _service = new ScreenService(_repository, _repository, _repository, new FakeScreenCapture());
+        _service = new ScreenService(_repository, _repository, _repository, new FakeScreenCapture(), _matcher);
 
     private ScreenEditorViewModel NewEditor(Screen? existing = null) =>
         new(_service, _dialogs, _profileId, TestImages.Gradient(200, 100), existing);
@@ -109,6 +111,26 @@ public class ScreenEditorViewModelTests
         Assert.False(editor.IsDirty);
         Assert.True(editor.ConfirmDiscard());
         Assert.Empty(_dialogs.Confirmations);
+    }
+
+    [Fact]
+    public void Recaptured_screen_flags_the_locations_not_found()
+    {
+        var capture = TestImages.Gradient(200, 100);
+        var found = new LocationDraft { Name = "Found", Bounds = new PixelRect(10, 10, 20, 20), ClickPoint = new PixelPoint(20, 20) };
+        var lost = new LocationDraft { Name = "Lost", Bounds = new PixelRect(50, 10, 20, 20), ClickPoint = new PixelPoint(60, 20) };
+        var (screen, _) = ScreenBuilder.Build(Guid.NewGuid(), "Map", new DelayRange(1, 2), capture, [found, lost]);
+        var recapture = new AutoPlay.Application.UseCases.RecaptureResult(
+            TestImages.Gradient(200, 100), [found.MovedTo(new PixelRect(15, 10, 20, 20)), lost], [lost.Id]);
+
+        var editor = new ScreenEditorViewModel(_service, _dialogs, _profileId, recapture.Capture, screen, recapture);
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(new PixelRect(15, 10, 20, 20), editor.Locations[0].Bounds);
+        Assert.False(editor.Locations[0].NeedsReview);
+        Assert.True(editor.Locations[1].NeedsReview);
+        Assert.Contains("1 location(s) found and re-positioned; 1 not found", editor.InfoMessage);
+        Assert.StartsWith("AutoPlay — Re-capture screen", editor.Title);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 using AutoPlay.Presentation.ViewModels;
@@ -9,6 +10,7 @@ public class SequenceEditorViewModelTests
 {
     private readonly InMemoryRepository _repository = new();
     private readonly FakeDialogs _dialogs = new();
+    private readonly FakeTemplateMatcher _matcher = new(new MatchResult(default, 0));
     private readonly Profile _profile = new() { Name = "Game" };
     private readonly Screen _screen;
 
@@ -28,7 +30,7 @@ public class SequenceEditorViewModelTests
 
     private SequenceEditorViewModel NewEditor(Sequence? existing = null) => new(
         new SequenceService(_repository, _repository),
-        new ScreenService(_repository, _repository, _repository, new FakeScreenCapture()),
+        new ScreenService(_repository, _repository, _repository, new FakeScreenCapture(), _matcher),
         _dialogs,
         _profile,
         [_screen],

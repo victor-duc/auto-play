@@ -43,6 +43,13 @@ public sealed partial class LocationViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
+    /// <summary>
+    /// Set when the location could not be re-positioned automatically after a re-capture; cleared as soon as the
+    /// user moves, resizes or redraws it.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool NeedsReview { get; set; }
+
     /// <summary>Whether the click point follows the center of the rectangle (until the user sets it explicitly).</summary>
     public bool ClickPointIsCenter { get; private set; }
 
@@ -63,6 +70,7 @@ public sealed partial class LocationViewModel : ObservableObject
     /// <summary>Moves the rectangle; the click point keeps its position relative to it.</summary>
     public void MoveTo(PixelRect bounds)
     {
+        NeedsReview = false;
         var offset = new PixelPoint(ClickPoint.X - Bounds.Left, ClickPoint.Y - Bounds.Top);
         Bounds = bounds;
         ClickPoint = ClickPointIsCenter ? bounds.Center : RectEditing.Clamp(new PixelPoint(bounds.Left + offset.X, bounds.Top + offset.Y), bounds);
@@ -71,12 +79,36 @@ public sealed partial class LocationViewModel : ObservableObject
     /// <summary>Resizes the rectangle; the click point stays centered or is kept inside.</summary>
     public void ResizeTo(PixelRect bounds)
     {
+        NeedsReview = false;
         Bounds = bounds;
         ClickPoint = ClickPointIsCenter ? bounds.Center : RectEditing.Clamp(ClickPoint, bounds);
     }
 
+    /// <summary>
+    /// Replaces the rectangle by a newly drawn one (re-positioning): the click point stays centered, or keeps its
+    /// relative position in the rectangle.
+    /// </summary>
+    public void RedrawTo(PixelRect bounds)
+    {
+        NeedsReview = false;
+        var old = Bounds;
+        Bounds = bounds;
+        if (ClickPointIsCenter || old.IsEmpty)
+        {
+            ClickPoint = bounds.Center;
+            return;
+        }
+
+        var relativeX = (ClickPoint.X - old.Left + 0.5) / old.Width;
+        var relativeY = (ClickPoint.Y - old.Top + 0.5) / old.Height;
+        ClickPoint = RectEditing.Clamp(
+            new PixelPoint(bounds.Left + (int)Math.Floor(relativeX * bounds.Width), bounds.Top + (int)Math.Floor(relativeY * bounds.Height)),
+            bounds);
+    }
+
     public void SetClickPoint(PixelPoint point)
     {
+        NeedsReview = false;
         ClickPointIsCenter = false;
         ClickPoint = RectEditing.Clamp(point, Bounds);
     }

@@ -56,6 +56,8 @@
                         <Button Content="Record screen" Command="{Binding RecordScreenCommand}"
                                 ToolTip="Frame the target area, capture it and define its click locations." />
                         <Button Content="Edit" Command="{Binding EditScreenCommand}" ToolTip="Edit the locations of the selected screen (double-click)." />
+                        <Button Content="Re-capture" Command="{Binding RecaptureScreenCommand}"
+                                ToolTip="Capture the selected screen again (e.g. after a game update) and re-position its locations automatically." />
                         <Button Content="Delete" Command="{Binding DeleteScreenCommand}" />
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Screens}" SelectedItem="{Binding SelectedScreen}">

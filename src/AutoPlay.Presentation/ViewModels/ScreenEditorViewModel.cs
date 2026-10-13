@@ -22,12 +22,14 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
     private readonly RawImage _capture;
 
     /// <param name="existingScreen">The screen to edit, or null to create a new one.</param>
+    /// <param name="recapture">For a re-captured screen: the new capture's re-positioned locations.</param>
     public ScreenEditorViewModel(
         ScreenService screenService,
         IUserDialogs dialogs,
         Guid profileId,
         RawImage capture,
-        Screen? existingScreen)
+        Screen? existingScreen,
+        RecaptureResult? recapture = null)
     {
         _screenService = screenService;
         _dialogs = dialogs;
@@ -43,19 +45,31 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
 
         if (existingScreen is not null)
         {
-            foreach (var draft in ScreenBuilder.ToDrafts(existingScreen, capture.Size))
+            var drafts = recapture?.Locations ?? ScreenBuilder.ToDrafts(existingScreen, capture.Size);
+            foreach (var draft in drafts)
             {
-                AddLocationViewModel(new LocationViewModel(draft));
+                AddLocationViewModel(new LocationViewModel(draft) { NeedsReview = recapture?.NotFound.Contains(draft.Id) == true });
             }
         }
 
-        IsDirty = false;
+        if (recapture is not null)
+        {
+            Title = $"AutoPlay — Re-capture screen '{existingScreen?.Name}'";
+            var moved = Locations.Count - recapture.NotFound.Count;
+            InfoMessage = recapture.NotFound.Count == 0
+                ? $"New capture: all {Locations.Count} location(s) were found and re-positioned. Check them, then save."
+                : $"New capture: {moved} location(s) found and re-positioned; {recapture.NotFound.Count} not found, shown in red: "
+                  + "move them or redraw them (Ctrl+drag), then save.";
+        }
+
+        // A new capture must be saved even if no location is touched.
+        IsDirty = recapture is not null;
     }
 
     /// <summary>Raised when the editor must close; the argument tells whether the screen was saved.</summary>
     public event EventHandler<bool>? CloseRequested;
 
-    public string Title { get; }
+    public string Title { get; private set; }
 
     /// <summary>The frozen capture the locations are drawn on.</summary>
     public RawImage Capture => _capture;
@@ -85,6 +99,9 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string? ErrorMessage { get; set; }
+
+    /// <summary>Information about the editing session (e.g. the result of a re-capture).</summary>
+    public string? InfoMessage { get; }
 
     /// <summary>
     /// Ratio between displayed and capture pixels. Overlay strokes and labels are divided by it

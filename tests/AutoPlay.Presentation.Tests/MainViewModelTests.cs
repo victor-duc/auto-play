@@ -1,3 +1,4 @@
+using AutoPlay.Application.Ports;
 using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Model;
 using AutoPlay.Presentation.Services;
@@ -12,13 +13,14 @@ public class MainViewModelTests
     private readonly FakeDialogs _dialogs = new();
     private readonly FakeShell _shell = new();
     private readonly FakeFlows _flows = new();
+    private readonly FakeTemplateMatcher _matcher = new(new MatchResult(default, 0));
     private readonly MainViewModel _viewModel;
 
     public MainViewModelTests()
     {
         _viewModel = new MainViewModel(
             new ProfileService(_repository),
-            new ScreenService(_repository, _repository, _repository, new FakeScreenCapture()),
+            new ScreenService(_repository, _repository, _repository, new FakeScreenCapture(), _matcher),
             new SequenceService(_repository, _repository),
             _flows,
             _flows,
@@ -112,6 +114,17 @@ public class MainViewModelTests
         _viewModel.DeleteSequenceCommand.Execute(null);
 
         Assert.Contains("It is run by: Daily.", Assert.Single(_dialogs.Confirmations));
+    }
+
+    [Fact]
+    public async Task RecaptureScreen_opens_the_recapture_flow()
+    {
+        AddProfileWithScreenAndSequence(out var screen, out _);
+        _viewModel.SelectedScreen = _viewModel.Screens.Single(s => s.Id == screen.Id);
+
+        await _viewModel.RecaptureScreenCommand.ExecuteAsync(null);
+
+        Assert.Equal(screen.Id, Assert.Single(_flows.Recaptured).Id);
     }
 
     [Fact]
