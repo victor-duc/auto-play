@@ -14,5 +14,8 @@ public interface ITemplateMatcher
     /// Searches <paramref name="templateImage"/>, resized to <paramref name="templateSize"/>, in <paramref name="image"/>
     /// and returns the best match. Returns a score of 0 if the template does not fit in the image.
     /// </summary>
-    MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize);
+    /// <param name="matchColors">
+    /// When false, only shapes are compared (grayscale). When true, the score is also lowered by color differences.
+    /// </param>
+    MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize, bool matchColors);
 }

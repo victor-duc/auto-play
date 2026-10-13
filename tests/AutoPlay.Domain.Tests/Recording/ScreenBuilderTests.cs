@@ -104,7 +104,7 @@ public class ScreenBuilderTests
         LocationDraft[] drafts =
         [
             new() { Name = "A", Bounds = new PixelRect(13, 7, 31, 17), ClickPoint = new PixelPoint(14, 23) },
-            new() { Name = "B", Bounds = new PixelRect(150, 60, 47, 23), ClickPoint = new PixelPoint(196, 82), MatchThreshold = 0.7 },
+            new() { Name = "B", Bounds = new PixelRect(150, 60, 47, 23), ClickPoint = new PixelPoint(196, 82), MatchThreshold = 0.7, MatchColors = true },
         ];
 
         var (screen, _) = ScreenBuilder.Build(Guid.NewGuid(), "S", new DelayRange(0, 0), capture, drafts);

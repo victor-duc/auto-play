@@ -16,6 +16,7 @@ public sealed partial class LocationViewModel : ObservableObject
         ClickPoint = draft.ClickPoint;
         ClickPointIsCenter = draft.ClickPoint == draft.Bounds.Center;
         MatchThresholdText = draft.MatchThreshold?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        MatchColors = draft.MatchColors;
     }
 
     public Guid Id { get; }
@@ -26,6 +27,10 @@ public sealed partial class LocationViewModel : ObservableObject
     /// <summary>Minimum match score, as typed by the user; empty means the profile default.</summary>
     [ObservableProperty]
     public partial string MatchThresholdText { get; set; }
+
+    /// <summary>Whether colors must match too, not only shapes.</summary>
+    [ObservableProperty]
+    public partial bool MatchColors { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(ClickOffsetX), nameof(ClickOffsetY))]
@@ -92,7 +97,7 @@ public sealed partial class LocationViewModel : ObservableObject
             threshold = value;
         }
 
-        draft = new LocationDraft { Id = Id, Name = Name, Bounds = Bounds, ClickPoint = ClickPoint, MatchThreshold = threshold };
+        draft = new LocationDraft { Id = Id, Name = Name, Bounds = Bounds, ClickPoint = ClickPoint, MatchThreshold = threshold, MatchColors = MatchColors };
         return null;
     }
 }

@@ -69,13 +69,17 @@ public class ScreenEditorViewModelTests
         bool? closed = null;
         editor.CloseRequested += (_, saved) => closed = saved;
         editor.ScreenName = "Map";
-        editor.AddLocation(new PixelRect(10, 10, 20, 20)).MatchThresholdText = "0,85";
+        var added = editor.AddLocation(new PixelRect(10, 10, 20, 20));
+        added.MatchThresholdText = "0,85";
+        added.MatchColors = true;
 
         editor.SaveCommand.Execute(null);
 
         Assert.True(closed);
         var screen = Assert.Single(_repository.Screens[_profileId]);
-        Assert.Equal(0.85, Assert.Single(screen.Locations).MatchThreshold);
+        var location = Assert.Single(screen.Locations);
+        Assert.Equal(0.85, location.MatchThreshold);
+        Assert.True(location.MatchColors);
         Assert.False(editor.IsDirty);
     }
 

@@ -132,7 +132,7 @@ public sealed class SequenceRunner(
         {
             var timeout = TimeSpan.FromMilliseconds(step.VerificationTimeoutMs ?? defaults.VerificationTimeoutMs);
             var threshold = location.MatchThreshold ?? defaults.MatchThreshold;
-            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, timeout, defaults, cancellationToken).ConfigureAwait(false);
+            var verification = await VerifyAsync(template, expectedBounds, targetRegion, threshold, location.MatchColors, timeout, defaults, cancellationToken).ConfigureAwait(false);
             if (verification.Match is not { } match)
             {
                 return (null, new RunResult(RunStatus.VerificationFailed, position)
@@ -166,6 +166,7 @@ public sealed class SequenceRunner(
         PixelRect expectedBounds,
         PixelRect targetRegion,
         double threshold,
+        bool matchColors,
         TimeSpan timeout,
         ProfileDefaults defaults,
         CancellationToken cancellationToken)
@@ -182,7 +183,7 @@ public sealed class SequenceRunner(
         while (true)
         {
             var capture = screenCapture.Capture(searchArea);
-            var result = templateMatcher.FindBestMatch(capture, template, expectedBounds.Size);
+            var result = templateMatcher.FindBestMatch(capture, template, expectedBounds.Size, matchColors);
             bestScore = Math.Max(bestScore, result.Score);
 
             if (result.Score >= threshold)

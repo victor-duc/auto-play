@@ -205,6 +205,17 @@ public class SequenceRunnerTests
     }
 
     [Fact]
+    public async Task Color_matching_setting_of_the_location_is_used()
+    {
+        _location.MatchColors = true;
+        var matcher = new FakeTemplateMatcher(MatchAtExpectedPosition());
+
+        await Run(matcher, Sequence(1, Step()));
+
+        Assert.Equal([true], matcher.RequestedColorModes);
+    }
+
+    [Fact]
     public async Task Runs_and_clicks_are_logged()
     {
         var logger = new ListLogger<SequenceRunner>();

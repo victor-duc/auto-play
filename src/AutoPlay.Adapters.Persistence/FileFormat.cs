@@ -13,13 +13,14 @@ namespace AutoPlay.Adapters.Persistence;
 /// <item>0 — files written before versioning: no <c>schemaVersion</c>, and computed geometry
 /// properties (<c>right</c>, <c>center</c>, <c>isEmpty</c>…) that are ignored on read.</item>
 /// <item>1 — <c>schemaVersion</c> added, computed properties removed.</item>
+/// <item>2 — new properties, with defaults for older files: <c>matchColors</c> on locations (false).</item>
 /// </list>
 /// When the format changes, increment <see cref="CurrentVersion"/>, update the schemas and add the
 /// conversion of older files to <see cref="Migrate"/>.
 /// </remarks>
 internal static class FileFormat
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public const string VersionProperty = "schemaVersion";
 
@@ -81,6 +82,7 @@ internal static class FileFormat
     private static void Migrate(JsonObject document, int version)
     {
         // 0 → 1: nothing to convert; the computed properties of version 0 are ignored on read.
+        // 1 → 2: nothing to convert; the new properties take their default values when missing.
         _ = document;
         _ = version;
     }

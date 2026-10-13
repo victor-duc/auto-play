@@ -19,4 +19,10 @@ public sealed class Location
 
     /// <summary>Overrides the profile's match threshold when set.</summary>
     public double? MatchThreshold { get; set; }
+
+    /// <summary>
+    /// Whether colors must match too, not only shapes: use it for elements whose states differ only by
+    /// color (e.g. an enabled and a greyed-out button).
+    /// </summary>
+    public bool MatchColors { get; set; }
 }

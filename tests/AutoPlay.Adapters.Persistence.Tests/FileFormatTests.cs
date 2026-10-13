@@ -13,7 +13,7 @@ namespace AutoPlay.Adapters.Persistence.Tests;
 /// </summary>
 public sealed class FileFormatTests : IDisposable
 {
-    private const int CurrentVersion = 1;
+    private const int CurrentVersion = 2;
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "AutoPlayTests", Guid.NewGuid().ToString());
     private readonly FileProfileStore _store;
@@ -70,6 +70,7 @@ public sealed class FileFormatTests : IDisposable
             Bounds = new NormalizedRect(0, 0, 1, 1),
             ClickPoint = new NormalizedPoint(0.5, 0.5),
             MatchThreshold = 0.9,
+            MatchColors = true,
         };
         var screen = new Screen
         {
@@ -164,7 +165,7 @@ public sealed class FileFormatTests : IDisposable
         var invalidThreshold = JsonNode.Parse(ProfileJson)!;
         invalidThreshold["defaults"]!["matchThreshold"] = 1.5;
         var otherVersion = JsonNode.Parse(ProfileJson)!;
-        otherVersion["schemaVersion"] = 2;
+        otherVersion["schemaVersion"] = CurrentVersion + 1;
 
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, missingName.ToJsonString()));
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, invalidThreshold.ToJsonString()));
@@ -208,6 +209,36 @@ public sealed class FileFormatTests : IDisposable
         _store.SaveProfile(Assert.Single(_store.LoadProfiles()));
 
         Assert.Empty(JsonSchemas.Validate(JsonSchemas.Profile, ProfileJson));
+    }
+
+    [Fact]
+    public void Files_written_by_version_1_are_read_with_defaults()
+    {
+        var screenId = Guid.NewGuid();
+        var locationId = Guid.NewGuid();
+        var screenDirectory = Path.Combine(ProfileDirectory, "screens", screenId.ToString());
+        Directory.CreateDirectory(screenDirectory);
+        File.WriteAllText(Path.Combine(screenDirectory, "screen.json"), $$"""
+            {
+              "schemaVersion": 1,
+              "id": "{{screenId}}",
+              "name": "Map",
+              "recordedRegionSize": { "width": 100, "height": 50 },
+              "defaultDelay": { "minMs": 1, "maxMs": 2 },
+              "locations": [
+                {
+                  "id": "{{locationId}}", "name": "A", "positioning": "Proportional",
+                  "bounds": { "x": 0, "y": 0, "width": 0.5, "height": 0.5 },
+                  "clickPoint": { "x": 0.25, "y": 0.25 }, "matchThreshold": null
+                }
+              ]
+            }
+            """);
+
+        var location = Assert.Single(Assert.Single(_store.LoadScreens(_profile.Id)).Locations);
+
+        Assert.Equal("A", location.Name);
+        Assert.False(location.MatchColors);
     }
 
     [Fact]

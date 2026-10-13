@@ -44,9 +44,12 @@ public sealed class FakeTemplateMatcher(params MatchResult[] results) : ITemplat
 
     public List<PixelSize> RequestedSizes { get; } = [];
 
-    public MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize)
+    public List<bool> RequestedColorModes { get; } = [];
+
+    public MatchResult FindBestMatch(RawImage image, RawImage templateImage, PixelSize templateSize, bool matchColors)
     {
         RequestedSizes.Add(templateSize);
+        RequestedColorModes.Add(matchColors);
         return results[Math.Min(_calls++, results.Length - 1)];
     }
 }

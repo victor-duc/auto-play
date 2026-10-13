@@ -14,4 +14,6 @@ public sealed record LocationDraft
     public PixelPoint ClickPoint { get; init; }
 
     public double? MatchThreshold { get; init; }
+
+    public bool MatchColors { get; init; }
 }

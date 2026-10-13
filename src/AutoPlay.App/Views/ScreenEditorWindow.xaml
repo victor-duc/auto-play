@@ -53,7 +53,7 @@
         </Border>
 
         <!-- Locations panel -->
-        <Border DockPanel.Dock="Right" Width="330" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
+        <Border DockPanel.Dock="Right" Width="380" Padding="12" BorderBrush="#22000000" BorderThickness="1,0,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionTitle}"
                            Text="{Binding Locations.Count, StringFormat='Locations ({0})'}" />
@@ -61,13 +61,15 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="68" />
+                        <ColumnDefinition Width="50" />
                         <ColumnDefinition Width="28" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Name" Foreground="Gray" />
                     <TextBlock Grid.Column="1" Text="Threshold" Foreground="Gray" Margin="6,0,0,0" />
+                    <TextBlock Grid.Column="2" Text="Colors" Foreground="Gray" HorizontalAlignment="Center" />
                 </Grid>
                 <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Threshold: minimum similarity, from 0 to 1, required to click the location. Leave empty to use the profile default (0.8)." />
+                           Text="Threshold: minimum similarity, from 0 to 1, required to click the location. Leave empty to use the profile default (0.8). Colors: also compare colors, not only shapes (e.g. to tell an enabled button from a greyed-out one)." />
                 <ListBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SelectedLocation}"
                          HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
@@ -86,12 +88,15 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="68" />
+                                    <ColumnDefinition Width="50" />
                                     <ColumnDefinition Width="28" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Location name" />
                                 <TextBox Grid.Column="1" Margin="6,0,6,0" ToolTip="Match threshold (empty = profile default)"
                                          Text="{Binding MatchThresholdText, UpdateSourceTrigger=PropertyChanged}" />
-                                <Button Grid.Column="2" Content="✕" MinWidth="0" Margin="0" Padding="0" ToolTip="Delete this location"
+                                <CheckBox Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          IsChecked="{Binding MatchColors}" ToolTip="Colors must match too, not only shapes" />
+                                <Button Grid.Column="3" Content="✕" MinWidth="0" Margin="0" Padding="0" ToolTip="Delete this location"
                                         Command="{Binding DataContext.DeleteLocationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}" />
                             </Grid>
