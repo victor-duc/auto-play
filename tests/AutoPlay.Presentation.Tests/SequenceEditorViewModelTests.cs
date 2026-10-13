@@ -28,13 +28,18 @@ public class SequenceEditorViewModelTests
         }
     }
 
+    private readonly FakeFlows _flows = new();
+    private readonly FakeLocationTester _tester = new();
+
     private SequenceEditorViewModel NewEditor(Sequence? existing = null) => new(
         new SequenceService(_repository, _repository),
         new ScreenService(_repository, _repository, _repository, new FakeScreenCapture(), _matcher),
         _dialogs,
         _profile,
         [_screen],
-        existing);
+        existing,
+        _flows,
+        _tester);
 
     private static void Add(SequenceEditorViewModel editor, string locationName)
     {
@@ -330,5 +335,102 @@ public class SequenceEditorViewModelTests
         step.DelayMaxMs = "2";
 
         Assert.Equal("Delay 1–2 ms · no verification", step.Summary);
+    }
+
+    [Fact]
+    public void MoveStep_moves_a_dragged_step_and_selects_it()
+    {
+        var editor = NewEditor();
+        Add(editor, "A");
+        Add(editor, "B");
+        Add(editor, "C");
+
+        editor.MoveStep(editor.Steps[0], 2);
+
+        Assert.Equal(["Map / B", "Map / C", "Map / A"], Titles(editor));
+        Assert.Equal([1, 2, 3], editor.Steps.Select(s => s.Number));
+        Assert.Equal("Map / A", editor.SelectedStep?.Title);
+
+        editor.MoveStep(editor.Steps[2], 99);
+        Assert.Equal(["Map / B", "Map / C", "Map / A"], Titles(editor));
+    }
+
+    [Fact]
+    public async Task TestStep_reports_whether_the_location_is_found()
+    {
+        var editor = NewEditor();
+        Add(editor, "B");
+        _tester.Result = OperationResult.Success(new LocationTestResult("Map", "B", 0.93, 0.8, 0, 0));
+
+        await editor.TestStepCommand.ExecuteAsync(null);
+
+        Assert.Equal((_screen.Id, _screen.Locations[1].Id), Assert.Single(_tester.Tested));
+        Assert.True(editor.TestPassed);
+        Assert.StartsWith("Step 1: 'B' found at its recorded position (score 0", editor.TestMessage);
+
+        _tester.Result = OperationResult.Success(new LocationTestResult("Map", "B", 0.41, 0.8, 3, -2));
+        await editor.TestStepCommand.ExecuteAsync(null);
+
+        Assert.False(editor.TestPassed);
+        Assert.Contains("not found", editor.TestMessage);
+    }
+
+    [Fact]
+    public void TestStep_is_only_available_for_click_steps()
+    {
+        var editor = NewEditor();
+        editor.AddWaitCommand.Execute(null);
+
+        Assert.False(editor.TestStepCommand.CanExecute(null));
+
+        Add(editor, "A");
+        Assert.True(editor.TestStepCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task RunFromStep_saves_then_runs_from_the_selected_step()
+    {
+        var editor = NewEditor();
+        Add(editor, "A");
+        Add(editor, "B");
+        editor.Name = "Raid";
+        bool? closed = null;
+        editor.CloseRequested += (_, saved) => closed = saved;
+
+        await editor.RunFromStepCommand.ExecuteAsync(null);
+
+        var saved = Assert.Single(_repository.Sequences[_profile.Id]);
+        Assert.Equal(saved.Id, Assert.Single(_flows.Runs).Id);
+        Assert.Equal(1, Assert.Single(_flows.RunOptions).StartStep);
+        Assert.False(editor.IsDirty);
+
+        // Closing the editor afterwards reports the sequence as saved, so that the main window reloads it.
+        editor.CancelCommand.Execute(null);
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public async Task RunFromStep_does_not_run_an_invalid_sequence()
+    {
+        var editor = NewEditor();
+        Add(editor, "A");
+
+        await editor.RunFromStepCommand.ExecuteAsync(null);
+
+        Assert.NotNull(editor.ErrorMessage);
+        Assert.Empty(_flows.Runs);
+    }
+
+    private sealed class FakeLocationTester : AutoPlay.Presentation.Services.ILocationTestFlow
+    {
+        public OperationResult<LocationTestResult> Result { get; set; } = OperationResult.Failure<LocationTestResult>("Not set");
+
+        public List<(Guid ScreenId, Guid LocationId)> Tested { get; } = [];
+
+        public Task<OperationResult<LocationTestResult>> TestAsync(Profile profile, Guid screenId, Guid locationId)
+        {
+            Tested.Add((screenId, locationId));
+            return Task.FromResult(Result);
+        }
     }
 }

@@ -141,6 +141,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IScreenRecordingFlow, ScreenRecordingFlow>();
         services.AddSingleton<ISettingsFlow, SettingsFlow>();
         services.AddSingleton<ISequenceEditingFlow, SequenceEditingFlow>();
+        services.AddSingleton<ILocationTestFlow, LocationTestFlow>();
         services.AddSingleton<ISequenceExecutionFlow, SequenceExecutionFlow>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();

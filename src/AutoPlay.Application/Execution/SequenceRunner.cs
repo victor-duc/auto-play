@@ -189,11 +189,7 @@ public sealed class SequenceRunner(
         ProfileDefaults defaults,
         CancellationToken cancellationToken)
     {
-        var searchArea = expectedBounds
-            .Inflate(
-                CoordinateMapper.Round(expectedBounds.Width * defaults.SearchMargin),
-                CoordinateMapper.Round(expectedBounds.Height * defaults.SearchMargin))
-            .Intersect(targetRegion);
+        var searchArea = SearchArea.Around(expectedBounds, targetRegion, defaults.SearchMargin);
         var expectedInCapture = expectedBounds.Offset(-searchArea.Left, -searchArea.Top);
         var deadline = clock.UtcNow + timeout;
         var bestScore = 0.0;

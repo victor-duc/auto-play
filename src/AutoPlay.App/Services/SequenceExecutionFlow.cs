@@ -50,8 +50,7 @@ public sealed class SequenceExecutionFlow(
 
         IsRunning = true;
         using var busy = activity.Begin();
-        var mainWindow = System.Windows.Application.Current.MainWindow;
-        mainWindow.Hide();
+        var hidden = HiddenWindows.HideAll();
         try
         {
             var region = profile.LastTargetRegion;
@@ -84,8 +83,7 @@ public sealed class SequenceExecutionFlow(
         finally
         {
             IsRunning = false;
-            mainWindow.Show();
-            mainWindow.Activate();
+            hidden.Dispose();
         }
     }
 }

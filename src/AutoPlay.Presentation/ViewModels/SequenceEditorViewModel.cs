@@ -20,17 +20,28 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     private readonly IUserDialogs _dialogs;
     private readonly Profile _profile;
     private readonly Guid _sequenceId;
+    private readonly ISequenceExecutionFlow? _execution;
+    private readonly ILocationTestFlow? _tester;
+
+    /// <summary>Whether the sequence was saved (e.g. before running it from a step), even if the editor is then cancelled.</summary>
+    private bool _savedOnce;
 
     /// <param name="screens">The screens of the profile.</param>
     /// <param name="existingSequence">The sequence to edit, or null to create a new one.</param>
+    /// <param name="execution">Runs the sequence from a step; null disables "Run from this step".</param>
+    /// <param name="tester">Tests a step on the live screen; null disables "Test this step".</param>
     public SequenceEditorViewModel(
         SequenceService sequenceService,
         ScreenService screenService,
         IUserDialogs dialogs,
         Profile profile,
         IReadOnlyList<Screen> screens,
-        Sequence? existingSequence)
+        Sequence? existingSequence,
+        ISequenceExecutionFlow? execution = null,
+        ILocationTestFlow? tester = null)
     {
+        _execution = execution;
+        _tester = tester;
         _sequenceService = sequenceService;
         _screenService = screenService;
         _dialogs = dialogs;
@@ -115,8 +126,79 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     public partial string? ErrorMessage { get; set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(MoveUpCommand), nameof(MoveDownCommand), nameof(DuplicateStepCommand), nameof(DeleteStepCommand))]
+    [NotifyCanExecuteChangedFor(
+        nameof(MoveUpCommand), nameof(MoveDownCommand), nameof(DuplicateStepCommand), nameof(DeleteStepCommand),
+        nameof(TestStepCommand), nameof(RunFromStepCommand))]
     public partial StepViewModel? SelectedStep { get; set; }
+
+    /// <summary>The result of the last "Test this step", or null.</summary>
+    [ObservableProperty]
+    public partial string? TestMessage { get; set; }
+
+    /// <summary>Whether the last tested step would be clicked by a run; null when there is no test result.</summary>
+    [ObservableProperty]
+    public partial bool? TestPassed { get; set; }
+
+    /// <summary>Moves a step to another position (drag and drop) and selects it.</summary>
+    public void MoveStep(StepViewModel step, int targetIndex)
+    {
+        var index = Steps.IndexOf(step);
+        if (index < 0 || Steps.Count == 0)
+        {
+            return;
+        }
+
+        targetIndex = Math.Clamp(targetIndex, 0, Steps.Count - 1);
+        if (targetIndex != index)
+        {
+            Steps.Move(index, targetIndex);
+        }
+
+        SelectedStep = step;
+    }
+
+    private bool CanTestStep() => _tester is not null && SelectedStep is { IsClick: true, IsMissing: false };
+
+    /// <summary>Looks for the location of the selected step on the live screen, without clicking.</summary>
+    [RelayCommand(CanExecute = nameof(CanTestStep))]
+    private async Task TestStepAsync()
+    {
+        if (_tester is null || SelectedStep is not { } step)
+        {
+            return;
+        }
+
+        var result = await _tester.TestAsync(_profile, step.ScreenId, step.LocationId);
+        if (!result.Succeeded || result.Value is not { } test)
+        {
+            TestPassed = false;
+            TestMessage = string.Join(" ", result.Errors);
+            return;
+        }
+
+        TestPassed = test.Found;
+        var position = test.OffsetX == 0 && test.OffsetY == 0
+            ? "at its recorded position"
+            : $"{test.OffsetX:+0;-0;0} px horizontally and {test.OffsetY:+0;-0;0} px vertically from its recorded position";
+        TestMessage = test.Found
+            ? $"Step {step.Number}: '{test.LocationName}' found {position} (score {test.Score:0.00}, threshold {test.Threshold:0.00})."
+            : $"Step {step.Number}: '{test.LocationName}' not found on the screen (best score {test.Score:0.00}, threshold {test.Threshold:0.00}). "
+              + $"Display the screen '{test.ScreenName}' and try again, or lower the threshold.";
+    }
+
+    private bool CanRunFromStep() => _execution is not null && SelectedStep is not null;
+
+    /// <summary>Saves the sequence, then runs it starting at the selected step.</summary>
+    [RelayCommand(CanExecute = nameof(CanRunFromStep))]
+    private async Task RunFromStepAsync()
+    {
+        if (_execution is null || SelectedStep is not { } step || TrySave() is not { } sequence)
+        {
+            return;
+        }
+
+        await _execution.RunAsync(_profile, sequence, new RunOptions(StartStep: Steps.IndexOf(step)));
+    }
 
     [ObservableProperty]
     public partial ScreenChoice? SelectedScreenChoice { get; set; }
@@ -211,12 +293,21 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
+        if (TrySave() is not null)
+        {
+            CloseRequested?.Invoke(this, true);
+        }
+    }
+
+    /// <summary>Validates and saves the sequence; returns it, or null with <see cref="ErrorMessage"/> set.</summary>
+    private Sequence? TrySave()
+    {
         ErrorMessage = null;
 
         if (!int.TryParse(RepeatCountText.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out var repeatCount))
         {
             ErrorMessage = "The repeat count must be a whole number (0 = until stopped).";
-            return;
+            return null;
         }
 
         var steps = new List<SequenceStep>();
@@ -225,7 +316,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
             if (stepViewModel.TryToStep(out var step) is { } error)
             {
                 ErrorMessage = error;
-                return;
+                return null;
             }
 
             steps.Add(step);
@@ -234,7 +325,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         if (!TryBuildSchedule(out var schedule, out var scheduleError))
         {
             ErrorMessage = scheduleError;
-            return;
+            return null;
         }
 
         var sequence = new Sequence { Id = _sequenceId, Name = Name, RepeatCount = repeatCount, Steps = steps, Schedule = schedule };
@@ -242,11 +333,12 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         if (!result.Succeeded)
         {
             ErrorMessage = string.Join(Environment.NewLine, result.Errors);
-            return;
+            return null;
         }
 
         IsDirty = false;
-        CloseRequested?.Invoke(this, true);
+        _savedOnce = true;
+        return sequence;
     }
 
     [RelayCommand]
@@ -255,7 +347,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         if (ConfirmDiscard())
         {
             IsDirty = false;
-            CloseRequested?.Invoke(this, false);
+            CloseRequested?.Invoke(this, _savedOnce);
         }
     }
 

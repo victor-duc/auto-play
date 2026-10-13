@@ -1,3 +1,4 @@
+using AutoPlay.Application.Execution;
 using AutoPlay.Application.Ports;
 using AutoPlay.Domain.Geometry;
 using AutoPlay.Domain.Imaging;
@@ -67,6 +68,49 @@ public sealed class ScreenService(
         return new RecaptureResult(capture, drafts, notFound);
     }
 
+    /// <summary>
+    /// Looks for a location on the live screen, in the profile's last target region, as a run would (same search area
+    /// and threshold) but once and without clicking: tells the user whether the step would work now.
+    /// </summary>
+    public OperationResult<LocationTestResult> TestLocation(Profile profile, Guid screenId, Guid locationId)
+    {
+        if (profile.LastTargetRegion is not { } targetRegion)
+        {
+            return OperationResult.Failure<LocationTestResult>(
+                "The target area is not known yet: record a screen or run a sequence once before testing a step.");
+        }
+
+        Screen? screen;
+        RawImage template;
+        try
+        {
+            screen = screens.LoadScreens(profile.Id).FirstOrDefault(s => s.Id == screenId);
+            if (screen?.FindLocation(locationId) is null)
+            {
+                return OperationResult.Failure<LocationTestResult>("The screen or the location of this step does not exist any more.");
+            }
+
+            template = screens.LoadLocationTemplate(profile.Id, screenId, locationId);
+        }
+        catch (PersistenceException ex)
+        {
+            UseCaseLog.StorageError(_logger, ex);
+            return OperationResult.Failure<LocationTestResult>(ex.Message);
+        }
+
+        var location = screen.FindLocation(locationId)!;
+        var expectedBounds = CoordinateMapper.ToPixel(location.Bounds, targetRegion);
+        var searchArea = SearchArea.Around(expectedBounds, targetRegion, profile.Defaults.SearchMargin);
+        var match = templateMatcher.FindBestMatch(screenCapture.Capture(searchArea), template, expectedBounds.Size, location.MatchColors);
+        return OperationResult.Success(new LocationTestResult(
+            screen.Name,
+            location.Name,
+            match.Score,
+            location.MatchThreshold ?? profile.Defaults.MatchThreshold,
+            match.Bounds.Left + searchArea.Left - expectedBounds.Left,
+            match.Bounds.Top + searchArea.Top - expectedBounds.Top));
+    }
+
     private PixelRect? FindLocation(
         Profile profile, Screen screen, Location location, LocationDraft draft, RawImage capture, PixelRect whole, double threshold)
     {
@@ -81,10 +125,7 @@ public sealed class ScreenService(
             return null;
         }
 
-        var margin = profile.Defaults.SearchMargin;
-        var nearby = draft.Bounds
-            .Inflate(CoordinateMapper.Round(draft.Bounds.Width * margin), CoordinateMapper.Round(draft.Bounds.Height * margin))
-            .Intersect(whole);
+        var nearby = SearchArea.Around(draft.Bounds, whole, profile.Defaults.SearchMargin);
         foreach (var area in new[] { nearby, whole })
         {
             var match = templateMatcher.FindBestMatch(capture.Crop(area), template, draft.Bounds.Size, location.MatchColors);

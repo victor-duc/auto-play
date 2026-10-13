@@ -131,4 +131,34 @@ public class ScreenServiceTests
         _service.DeleteScreen(_profileId, screen.Id);
         Assert.Empty(_service.GetScreens(_profileId));
     }
+
+    [Fact]
+    public void TestLocation_looks_for_the_location_once_in_its_search_area()
+    {
+        var location = new Location { Name = "Attack", Bounds = new NormalizedRect(0.1, 0.1, 0.2, 0.2), ClickPoint = new NormalizedPoint(0.2, 0.2) };
+        var screen = new Screen { Name = "Map", RecordedRegionSize = new PixelSize(200, 100), Locations = [location] };
+        _repository.SaveScreen(_profileId, screen, TestImages.Solid(200, 100), new Dictionary<Guid, RawImage> { [location.Id] = TestImages.Solid(40, 20) });
+        var profile = new Profile { Id = _profileId, Name = "Game", LastTargetRegion = new PixelRect(100, 100, 200, 100) };
+        var matcher = new FakeTemplateMatcher(new MatchResult(new PixelRect(25, 12, 40, 20), 0.9));
+        var service = new ScreenService(_repository, _repository, _repository, _capture, matcher);
+
+        var result = service.TestLocation(profile, screen.Id, location.Id);
+
+        // Expected at (120, 110, 40, 20); with the default 50% margin the search area is (100, 100, 80, 40).
+        Assert.Equal([new PixelRect(100, 100, 80, 40)], _capture.Captures);
+        Assert.Equal(new LocationTestResult("Map", "Attack", 0.9, 0.8, 5, 2), result.Value);
+        Assert.True(result.Value!.Found);
+    }
+
+    [Fact]
+    public void TestLocation_needs_a_known_target_region_and_an_existing_location()
+    {
+        var noRegion = _service.TestLocation(new Profile { Name = "Game" }, Guid.NewGuid(), Guid.NewGuid());
+        var missing = _service.TestLocation(
+            new Profile { Id = _profileId, Name = "Game", LastTargetRegion = new PixelRect(0, 0, 10, 10) }, Guid.NewGuid(), Guid.NewGuid());
+
+        Assert.Contains("target area is not known", noRegion.Errors[0]);
+        Assert.Contains("does not exist", missing.Errors[0]);
+        Assert.Empty(_capture.Captures);
+    }
 }

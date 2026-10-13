@@ -1,3 +1,4 @@
+using AutoPlay.Application.UseCases;
 using AutoPlay.Domain.Imaging;
 using AutoPlay.Domain.Model;
 
@@ -52,4 +53,10 @@ public interface ISequenceExecutionFlow
 
     /// <summary>Runs the sequence; returns false if it could not start (invalid sequence, framing cancelled…).</summary>
     Task<bool> RunAsync(Profile profile, Sequence sequence, RunOptions? options = null);
+}
+
+/// <summary>Looks for a location on the live screen, with the AutoPlay windows out of the way.</summary>
+public interface ILocationTestFlow
+{
+    Task<OperationResult<LocationTestResult>> TestAsync(Profile profile, Guid screenId, Guid locationId);
 }
