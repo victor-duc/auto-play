@@ -111,6 +111,24 @@ public sealed class SequenceRunner(
         CancellationToken cancellationToken)
     {
         var step = sequence.Steps[position.StepIndex];
+        if (step.Kind == StepKind.Wait)
+        {
+            // A wait keeps the last click position, so that a mouse move during the wait still pauses the run.
+            progress?.Report(new RunProgress(position, sequence.Steps.Count, null));
+            var duration = (step.Delay ?? new DelayRange(0, 0)).Next(random);
+            RunLog.Wait(_logger, position.Iteration + 1, position.StepIndex + 1, (int)duration.TotalMilliseconds);
+            await clock.DelayAsync(duration, cancellationToken).ConfigureAwait(false);
+            return (lastClick, null);
+        }
+
+        if (step.Kind != StepKind.Click)
+        {
+            return (null, new RunResult(RunStatus.InvalidStep, position)
+            {
+                Message = $"Step {position.StepIndex + 1} must be expanded before running (it runs another sequence).",
+            });
+        }
+
         if (!screens.TryGetValue(step.ScreenId, out var assets)
             || assets.Screen.FindLocation(step.LocationId) is not { } location
             || !assets.Templates.TryGetValue(location.Id, out var template))
@@ -214,6 +232,9 @@ internal static partial class RunLog
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Iteration {Iteration}, step {Step}: '{Screen} / {Location}' (score {Score}) clicked at ({X}, {Y})")]
     public static partial void Click(ILogger logger, int iteration, int step, string screen, string location, double? score, int x, int y);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Iteration {Iteration}, step {Step}: wait {DurationMs} ms")]
+    public static partial void Wait(ILogger logger, int iteration, int step, int durationMs);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Run of '{Sequence}' ended: {Status} at iteration {Iteration}, step {Step}. {Message}")]
     public static partial void Finished(ILogger logger, string sequence, RunStatus status, int iteration, int step, string? message);

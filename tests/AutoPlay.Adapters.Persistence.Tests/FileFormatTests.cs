@@ -104,6 +104,7 @@ public sealed class FileFormatTests : IDisposable
                     VerificationTimeoutMs = 5000,
                     Verify = false,
                 },
+                SequenceStep.Wait(new DelayRange(1000, 2000)),
             ],
         };
         _store.SaveSequence(_profile.Id, sequence);
@@ -170,6 +171,17 @@ public sealed class FileFormatTests : IDisposable
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, missingName.ToJsonString()));
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, invalidThreshold.ToJsonString()));
         Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Profile, otherVersion.ToJsonString()));
+    }
+
+    [Fact]
+    public void Schema_requires_a_duration_for_a_wait()
+    {
+        var sequence = new Sequence { Name = "S", Steps = [SequenceStep.Wait(new DelayRange(1, 2))] };
+        _store.SaveSequence(_profile.Id, sequence);
+        var json = JsonNode.Parse(File.ReadAllText(Path.Combine(ProfileDirectory, "sequences", $"{sequence.Id}.json")))!;
+        json["steps"]![0]!["delay"] = null;
+
+        Assert.NotEmpty(JsonSchemas.Validate(JsonSchemas.Sequence, json.ToJsonString()));
     }
 
     // ---- Older and newer versions

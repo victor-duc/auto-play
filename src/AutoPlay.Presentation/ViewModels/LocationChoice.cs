@@ -16,3 +16,6 @@ public sealed record ScreenChoice(Screen Screen, IReadOnlyList<LocationChoice> L
 {
     public string Name => Screen.Name;
 }
+
+/// <summary>A sequence that can be run by another one.</summary>
+public sealed record SequenceChoice(Guid Id, string Name);

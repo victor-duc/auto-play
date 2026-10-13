@@ -50,7 +50,7 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
 
         foreach (var step in existingSequence?.Steps ?? [])
         {
-            AddStepViewModel(Steps.Count, new StepViewModel(step, FindChoice(step), profile.Defaults));
+            AddStepViewModel(Steps.Count, new StepViewModel(step, FindChoice(step), null, profile.Defaults));
         }
 
         Steps.CollectionChanged += OnStepsChanged;
@@ -106,7 +106,18 @@ public sealed partial class SequenceEditorViewModel : ObservableObject
         var step = new StepViewModel(
             new SequenceStep { ScreenId = choice.Screen.Id, LocationId = choice.Location.Id },
             choice,
+            null,
             _profile.Defaults);
+        Insert(step);
+    }
+
+    /// <summary>Adds a one-second wait after the selected step (or at the end) and selects it.</summary>
+    [RelayCommand]
+    private void AddWait() =>
+        Insert(new StepViewModel(SequenceStep.Wait(new DelayRange(StepViewModel.DefaultWaitMs, StepViewModel.DefaultWaitMs)), null, null, _profile.Defaults));
+
+    private void Insert(StepViewModel step)
+    {
         var index = SelectedStep is null ? Steps.Count : Steps.IndexOf(SelectedStep) + 1;
         AddStepViewModel(index, step);
         SelectedStep = step;

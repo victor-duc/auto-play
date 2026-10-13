@@ -59,16 +59,7 @@ public sealed class SequenceService(ISequenceRepository sequences, IScreenReposi
             {
                 Name = name,
                 RepeatCount = original.RepeatCount,
-                Steps = original.Steps
-                    .Select(s => new SequenceStep
-                    {
-                        ScreenId = s.ScreenId,
-                        LocationId = s.LocationId,
-                        Delay = s.Delay,
-                        VerificationTimeoutMs = s.VerificationTimeoutMs,
-                        Verify = s.Verify,
-                    })
-                    .ToList(),
+                Steps = original.Steps.Select(s => s.Clone()).ToList(),
             };
             sequences.SaveSequence(profileId, copy);
             return OperationResult.Success(copy);

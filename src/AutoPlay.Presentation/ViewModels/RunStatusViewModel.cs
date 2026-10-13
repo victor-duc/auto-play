@@ -73,7 +73,7 @@ public sealed partial class RunStatusViewModel : ObservableObject
 
     public string StateText => State switch
     {
-        RunState.Running => "Running — press F12 to stop",
+        RunState.Running => "Running — press Esc or F12 to stop",
         RunState.Paused => "Paused",
         RunState.Stopped => "Stopped",
         RunState.Completed => "Completed",
@@ -236,6 +236,11 @@ public sealed partial class RunStatusViewModel : ObservableObject
     private string DescribeStep(int stepIndex)
     {
         var step = _sequence.Steps[stepIndex];
+        if (step.Kind == StepKind.Wait)
+        {
+            return step.Delay is { } delay ? $"wait {delay.MinMs}–{delay.MaxMs} ms" : "wait";
+        }
+
         return _screens.TryGetValue(step.ScreenId, out var assets) && assets.Screen.FindLocation(step.LocationId) is { } location
             ? $"{assets.Screen.Name} / {location.Name}"
             : "?";

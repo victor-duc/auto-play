@@ -12,16 +12,17 @@ namespace AutoPlay.App.Views;
 
 /// <summary>
 /// Small always-on-top window showing the progress of a run. It is placed outside the target region,
-/// excluded from screen captures, and registers the F12 emergency stop hotkey.
+/// excluded from screen captures, and registers the Esc and F12 emergency stop hotkeys.
 /// </summary>
 [SuppressMessage("Design", "CA1001", Justification = "The hotkey is disposed when the window is closed.")]
 public partial class RunStatusWindow : Window
 {
+    private const uint VirtualKeyEscape = 0x1B;
     private const uint VirtualKeyF12 = 0x7B;
 
     private readonly RunStatusViewModel _viewModel;
     private readonly PixelRect _targetRegion;
-    private GlobalHotkey? _stopHotkey;
+    private readonly List<GlobalHotkey> _stopHotkeys = [];
     private bool _started;
 
     public RunStatusWindow(RunStatusViewModel viewModel, PixelRect targetRegion)
@@ -33,7 +34,7 @@ public partial class RunStatusWindow : Window
         viewModel.CloseRequested += (_, _) => Close();
         SourceInitialized += OnSourceInitialized;
         ContentRendered += OnContentRendered;
-        Closed += (_, _) => _stopHotkey?.Dispose();
+        Closed += (_, _) => _stopHotkeys.ForEach(h => h.Dispose());
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -46,14 +47,26 @@ public partial class RunStatusWindow : Window
         WindowGeometry.TryExcludeFromCapture(handle);
 
         HwndSource.FromHwnd(handle)?.AddHook(WndProc);
-        try
+        // While a run is active, Esc and F12 stop it from any window. They are released when this window closes.
+        var unavailable = new List<string>();
+        foreach (var (key, name) in new[] { (VirtualKeyEscape, "Esc"), (VirtualKeyF12, "F12") })
         {
-            _stopHotkey = new GlobalHotkey(handle, VirtualKeyF12);
-            _stopHotkey.Pressed += (_, _) => _viewModel.Stop();
+            try
+            {
+                var hotkey = new GlobalHotkey(handle, key);
+                hotkey.Pressed += (_, _) => _viewModel.Stop();
+                _stopHotkeys.Add(hotkey);
+            }
+            catch (Win32Exception)
+            {
+                unavailable.Add(name);
+            }
         }
-        catch (Win32Exception)
+
+        if (unavailable.Count > 0)
         {
-            _viewModel.Message = "F12 is already used by another application: use the Stop button or move the mouse to pause.";
+            _viewModel.Message = $"{string.Join(" and ", unavailable)} already used by another application: "
+                + "use the other key, the Stop button, or move the mouse to pause.";
         }
     }
 
@@ -70,7 +83,7 @@ public partial class RunStatusWindow : Window
 
     private nint WndProc(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (_stopHotkey?.ProcessMessage(message, wParam) == true)
+        if (_stopHotkeys.Any(h => h.ProcessMessage(message, wParam)))
         {
             handled = true;
         }

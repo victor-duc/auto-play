@@ -24,14 +24,15 @@ public sealed class SequenceExecutionService(IScreenRepository screens, IRunLogS
         try
         {
             var profileScreens = screens.LoadScreens(profileId);
-            if (sequence.Steps.Count == 0 || sequence.Steps.Any(step => SequenceValidator.FindLocation(profileScreens, step) is null))
+            var clickSteps = sequence.Steps.Where(s => s.Kind == StepKind.Click).ToList();
+            if (sequence.Steps.Count == 0 || clickSteps.Any(step => SequenceValidator.FindLocation(profileScreens, step) is null))
             {
                 return OperationResult.Failure<IReadOnlyDictionary<Guid, ScreenAssets>>(
                     $"The sequence '{sequence.Name}' has no steps or refers to deleted screens or locations. Edit it first.");
             }
 
             var assets = new Dictionary<Guid, ScreenAssets>();
-            foreach (var screenId in sequence.Steps.Select(s => s.ScreenId).Distinct())
+            foreach (var screenId in clickSteps.Select(s => s.ScreenId).Distinct())
             {
                 var screen = profileScreens.First(s => s.Id == screenId);
                 var templates = screen.Locations.ToDictionary(

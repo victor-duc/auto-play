@@ -205,6 +205,41 @@ public class SequenceRunnerTests
     }
 
     [Fact]
+    public async Task Wait_step_waits_without_capturing_or_clicking()
+    {
+        var sequence = Sequence(1, SequenceStep.Wait(new DelayRange(2000, 2000)), Step());
+
+        var result = await Run(new FakeTemplateMatcher(MatchAtExpectedPosition()), sequence);
+
+        Assert.Equal(RunStatus.Completed, result.Status);
+        Assert.Equal([TimeSpan.FromMilliseconds(2000), TimeSpan.FromMilliseconds(100)], _clock.Delays);
+        Assert.Single(_capture.Captures);
+        Assert.Single(_input.Clicks);
+    }
+
+    [Fact]
+    public async Task Mouse_moved_during_a_wait_pauses_before_the_next_click()
+    {
+        _input.UserMove = (1, new PixelPoint(0, 0));
+        var sequence = Sequence(1, Step(), SequenceStep.Wait(new DelayRange(10, 10)), Step());
+
+        var result = await Run(new FakeTemplateMatcher(MatchAtExpectedPosition()), sequence);
+
+        Assert.Equal(RunStatus.UserTookOver, result.Status);
+        Assert.Equal(new RunPosition(0, 2), result.Position);
+    }
+
+    [Fact]
+    public async Task Unexpanded_run_sequence_step_is_reported()
+    {
+        var sequence = Sequence(1, new SequenceStep { Kind = StepKind.RunSequence, SequenceId = Guid.NewGuid() });
+
+        var result = await Run(new FakeTemplateMatcher(MatchAtExpectedPosition()), sequence);
+
+        Assert.Equal(RunStatus.InvalidStep, result.Status);
+    }
+
+    [Fact]
     public async Task Color_matching_setting_of_the_location_is_used()
     {
         _location.MatchColors = true;

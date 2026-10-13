@@ -44,6 +44,18 @@ public class SequenceExecutionServiceTests
     }
 
     [Fact]
+    public void PrepareRun_accepts_wait_steps()
+    {
+        var sequence = SequenceOn(_screen.Locations[0].Id);
+        sequence.Steps.Insert(0, SequenceStep.Wait(new DelayRange(1, 1)));
+
+        var result = _service.PrepareRun(_profileId, sequence);
+
+        Assert.True(result.Succeeded);
+        Assert.Single(result.Value!);
+    }
+
+    [Fact]
     public void PrepareRun_refuses_an_empty_sequence()
     {
         Assert.False(_service.PrepareRun(_profileId, SequenceOn()).Succeeded);

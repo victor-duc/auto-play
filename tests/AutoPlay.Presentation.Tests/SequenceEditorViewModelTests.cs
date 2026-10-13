@@ -154,6 +154,66 @@ public class SequenceEditorViewModelTests
     }
 
     [Fact]
+    public void AddWait_inserts_a_one_second_wait()
+    {
+        var editor = NewEditor();
+        Add(editor, "A");
+        Add(editor, "B");
+        editor.SelectedStep = editor.Steps[0];
+
+        editor.AddWaitCommand.Execute(null);
+
+        Assert.Equal(["Map / A", "Wait", "Map / B"], Titles(editor));
+        var wait = editor.Steps[1];
+        Assert.True(wait.IsWait);
+        Assert.False(wait.IsMissing);
+        Assert.Equal("1000–1000 ms", wait.Summary);
+    }
+
+    [Fact]
+    public void Wait_is_saved_with_its_duration()
+    {
+        var editor = NewEditor();
+        editor.Name = "Raids";
+        Add(editor, "A");
+        editor.AddWaitCommand.Execute(null);
+        editor.Steps[1].DelayMinMs = "2000";
+        editor.Steps[1].DelayMaxMs = "3000";
+
+        editor.SaveCommand.Execute(null);
+
+        var saved = Assert.Single(_repository.Sequences[_profile.Id]);
+        Assert.Equal(StepKind.Wait, saved.Steps[1].Kind);
+        Assert.Equal(new DelayRange(2000, 3000), saved.Steps[1].Delay);
+    }
+
+    [Fact]
+    public void Invalid_wait_duration_is_reported()
+    {
+        var editor = NewEditor();
+        editor.Name = "Raids";
+        editor.AddWaitCommand.Execute(null);
+        editor.Steps[0].DelayMinMs = "two";
+
+        editor.SaveCommand.Execute(null);
+
+        Assert.StartsWith("The duration of step 1", editor.ErrorMessage);
+    }
+
+    [Fact]
+    public void Duplicated_wait_keeps_its_duration()
+    {
+        var editor = NewEditor();
+        editor.AddWaitCommand.Execute(null);
+        editor.Steps[0].DelayMinMs = "5";
+
+        editor.DuplicateStepCommand.Execute(null);
+
+        Assert.True(editor.Steps[1].IsWait);
+        Assert.Equal("5", editor.Steps[1].DelayMinMs);
+    }
+
+    [Fact]
     public void Step_summary_describes_the_effective_settings()
     {
         var editor = NewEditor();

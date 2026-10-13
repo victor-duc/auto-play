@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/victor-duc/auto-play/docs/schemas/sequence.schema.json",
   "title": "AutoPlay sequence",
-  "description": "sequences/<sequence-id>.json: an ordered list of clicks on screen locations.",
+  "description": "sequences/<sequence-id>.json: an ordered list of steps (clicks, waits, other sequences).",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "repeatCount", "steps"],
@@ -32,28 +32,27 @@
       "type": "string",
       "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
     },
-    "step": {
-      "description": "Clicks a location of a screen. Null settings inherit from the screen (delay) or the profile (timeout).",
+    "delayRange": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["screenId", "locationId", "delay", "verificationTimeoutMs", "verify"],
+      "required": ["minMs", "maxMs"],
       "properties": {
+        "minMs": { "type": "integer", "minimum": 0 },
+        "maxMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "step": {
+      "description": "One action. Click: clicks a location (screenId, locationId, delay before the click, verification). Wait: waits a random duration (delay, required). RunSequence: runs another sequence (sequenceId). Properties that do not apply to the kind are ignored.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "screenId", "locationId", "delay", "verificationTimeoutMs", "verify", "sequenceId"],
+      "properties": {
+        "kind": { "enum": ["Click", "Wait", "RunSequence"] },
         "screenId": { "$ref": "#/$defs/guid" },
         "locationId": { "$ref": "#/$defs/guid" },
         "delay": {
-          "description": "Random delay before the click; null to use the screen's default delay.",
-          "oneOf": [
-            { "type": "null" },
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["minMs", "maxMs"],
-              "properties": {
-                "minMs": { "type": "integer", "minimum": 0 },
-                "maxMs": { "type": "integer", "minimum": 0 }
-              }
-            }
-          ]
+          "description": "Click: random delay before the click, null to use the screen's default delay. Wait: the duration.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/delayRange" }]
         },
         "verificationTimeoutMs": {
           "description": "Maximum time to wait for the location, in milliseconds; null to use the profile default.",
@@ -62,8 +61,22 @@
         "verify": {
           "description": "Whether the template image must be found before clicking.",
           "type": "boolean"
+        },
+        "sequenceId": {
+          "description": "RunSequence: the sequence to run; null for other kinds.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/guid" }]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "Wait" } } },
+          "then": { "properties": { "delay": { "$ref": "#/$defs/delayRange" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "RunSequence" } } },
+          "then": { "properties": { "sequenceId": { "$ref": "#/$defs/guid" } } }
+        }
+      ]
     }
   }
 }

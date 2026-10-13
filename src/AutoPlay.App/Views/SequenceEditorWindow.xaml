@@ -61,8 +61,12 @@
                           DisplayMemberPath="Name" IsEnabled="{Binding HasScreens}" />
                 <TextBlock DockPanel.Dock="Top" Margin="0,8,0,4" Text="Location" Foreground="Gray" />
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                    <Button HorizontalAlignment="Left" Margin="0" Content="Add step" Command="{Binding AddStepCommand}"
+                    <StackPanel Orientation="Horizontal">
+                    <Button Content="Add step" Command="{Binding AddStepCommand}"
                             ToolTip="Insert the location after the selected step (double-click a location)" />
+                        <Button Content="Add wait" Command="{Binding AddWaitCommand}" Margin="0"
+                                ToolTip="Insert a pause of 1 second (adjustable) after the selected step" />
+                    </StackPanel>
                     <TextBlock Margin="0,6,0,0" Foreground="Gray" TextWrapping="Wrap"
                                Text="The step is inserted after the selected step, or at the end if no step is selected." />
                     <TextBlock Margin="0,6,0,0" Foreground="Firebrick" TextWrapping="Wrap"
@@ -103,7 +107,14 @@
                       Header="{Binding Number, StringFormat='Step {0} settings', FallbackValue='Step settings'}"
                       IsEnabled="{Binding DataContext.SelectedStep, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NotNullToBoolean}}">
                 <StackPanel>
-                    <WrapPanel Margin="0,0,0,6">
+                    <WrapPanel Visibility="{Binding IsWait, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Text="Wait between" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMinMs, UpdateSourceTrigger=PropertyChanged}" ToolTip="Minimum (ms)" />
+                        <TextBlock Text="and" Margin="6,0" VerticalAlignment="Center" />
+                        <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMaxMs, UpdateSourceTrigger=PropertyChanged}" ToolTip="Maximum (ms)" />
+                        <TextBlock Text="ms (a random duration in this range)" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,0,0,6" Visibility="{Binding IsClick, Converter={StaticResource BooleanToVisibility}}">
                         <CheckBox Content="Custom delay before click" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="{Binding OverrideDelay}" />
                         <TextBox Style="{StaticResource NumberBox}" Text="{Binding DelayMinMs, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding OverrideDelay}" ToolTip="Minimum (ms)" />
@@ -112,7 +123,7 @@
                                  IsEnabled="{Binding OverrideDelay}" ToolTip="Maximum (ms)" />
                         <TextBlock Text="ms" Margin="6,0,0,0" VerticalAlignment="Center" />
                     </WrapPanel>
-                    <WrapPanel>
+                    <WrapPanel Visibility="{Binding IsClick, Converter={StaticResource BooleanToVisibility}}">
                         <CheckBox Content="Verify the location before clicking" VerticalAlignment="Center" Margin="0,0,24,0" IsChecked="{Binding Verify}" />
                         <CheckBox Content="Custom timeout" VerticalAlignment="Center" Margin="0,0,12,0"
                                   IsChecked="{Binding OverrideTimeout}" IsEnabled="{Binding Verify}" />
@@ -142,7 +153,11 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Number}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0" />
                             <Border Grid.Column="1" Width="72" Height="40" Margin="0,0,10,0" Background="#11000000">
-                                <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                <Grid>
+                                    <Image Source="{Binding Thumbnail, Converter={StaticResource RawImageToBitmap}}" Stretch="Uniform" StretchDirection="DownOnly" />
+                                    <TextBlock Text="⏱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding IsWait, Converter={StaticResource BooleanToVisibility}}" />
+                                </Grid>
                             </Border>
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="StepTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />

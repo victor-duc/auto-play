@@ -4,6 +4,7 @@
              xmlns:converters="clr-namespace:AutoPlay.App.Converters"
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
         <converters:NotNullToBooleanConverter x:Key="NotNullToBoolean" />
         <converters:AllTrueConverter x:Key="AllTrue" />
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibility" />
