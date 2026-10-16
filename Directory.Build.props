@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <!-- Version of the application, shown in the log and used to name the downloadable builds. -->
+    <Version>1.1.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
