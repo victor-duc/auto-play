@@ -52,11 +52,11 @@ DOM-based tools such as Playwright cannot target elements).
 The [downloads](downloads) folder contains compiled versions of AutoPlay for Windows 64-bit, no
 compilation needed:
 
-- [`AutoPlay-1.1.0-win-x64.zip`](downloads/AutoPlay-1.1.0-win-x64.zip) (26 MB) needs the
+- [`AutoPlay-1.1.1-win-x64.zip`](downloads/AutoPlay-1.1.1-win-x64.zip) (21 MB) needs the
   [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (Windows offers to
   install it on first launch);
-- [`AutoPlay-1.1.0-win-x64-self-contained.zip`](downloads/AutoPlay-1.1.0-win-x64-self-contained.zip)
-  (79 MB) runs without installing anything.
+- [`AutoPlay-1.1.1-win-x64-self-contained.zip`](downloads/AutoPlay-1.1.1-win-x64-self-contained.zip)
+  (74 MB) runs without installing anything.
 
 Download a zip file (**Download raw file** on GitHub), unblock it (right-click > **Properties** >
 **Unblock**), extract it and run `AutoPlay.exe`. See [downloads/README.md](downloads/README.md) for
@@ -96,6 +96,19 @@ The script publishes the two builds, zips them into `downloads`, removes the pre
 updates `SHA256SUMS.txt`; then update the file names and sizes in `downloads/README.md` and in this
 README, and commit the folder. The self-contained build includes the .NET runtime and is packed into a
 single compressed `AutoPlay.exe`; only the English resources of .NET and WPF are included.
+
+### Package size
+
+The application is small; most of a build is made of:
+
+| Part | Size (uncompressed) | How it is kept small |
+|---|---|---|
+| OpenCV native library (`OpenCvSharpExtern.dll`), used for image matching and PNG files | 55 MB | AutoPlay uses `OpenCvSharp4.runtime.win.slim` instead of `OpenCvSharp4.runtime.win`: same OpenCvSharp project, same OpenCV version, but built only with the modules AutoPlay may need (core, image processing, image files, and a few others), without neural networks, machine learning, video, user interface and the extra "contrib" modules. This saves 12 MB (67 MB with the full package) and removes the 28 MB ffmpeg video DLL. |
+| .NET and WPF runtime (self-contained build only) | about 130 MB | Only the English resources are published (9 MB less), and the files are packed into a single compressed `AutoPlay.exe`. WPF cannot be trimmed. |
+
+If a future feature needs an OpenCV module that the slim package leaves out (for example `dnn` or
+`video`), switch back to the full packages `OpenCvSharp4.runtime.win` and
+`OpenCvSharp4.official.runtime.linux-x64` in `Directory.Packages.props` and the project files.
 
 ## User guide
 

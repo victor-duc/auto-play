@@ -14,8 +14,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
-    <PackageReference Include="OpenCvSharp4.runtime.win" />
-    <PackageReference Include="OpenCvSharp4.official.runtime.linux-x64" />
+    <PackageReference Include="OpenCvSharp4.runtime.win.slim" />
+    <PackageReference Include="OpenCvSharp4.official.runtime.linux-x64.slim" />
   </ItemGroup>
 
   <ItemGroup>

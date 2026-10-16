@@ -4,10 +4,14 @@ Ready-to-use builds of AutoPlay for Windows (64-bit), so you can try it on any P
 
 | File | Size | Use it when |
 |---|---|---|
-| `AutoPlay-1.1.0-win-x64.zip` | 26 MB | The PC has the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (or you can install it). Smallest download. |
-| `AutoPlay-1.1.0-win-x64-self-contained.zip` | 79 MB | Nothing must be installed: one `AutoPlay.exe` that includes .NET. |
+| `AutoPlay-1.1.1-win-x64.zip` | 21 MB | The PC has the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (or you can install it). Smallest download. |
+| `AutoPlay-1.1.1-win-x64-self-contained.zip` | 74 MB | Nothing must be installed: one `AutoPlay.exe` that includes .NET. |
 
 Requirements: Windows 10 version 1809 or later (2004+ recommended), or Windows 11, 64-bit.
+
+Most of the size is the image recognition library (OpenCV, 55 MB uncompressed) and, in the
+self-contained build, the .NET runtime. AutoPlay uses the **slim** build of OpenCV, which leaves out
+the modules it does not need (see [Package size](../README.md#package-size)).
 
 ## Install
 
@@ -32,7 +36,7 @@ update AutoPlay, replace the application files with the new version; to uninstal
 `SHA256SUMS.txt` lists the SHA-256 checksum of each zip file. In PowerShell:
 
 ```powershell
-Get-FileHash .\AutoPlay-1.1.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AutoPlay-1.1.1-win-x64.zip -Algorithm SHA256
 ```
 
 The hash must match the line of the file in `SHA256SUMS.txt`.
