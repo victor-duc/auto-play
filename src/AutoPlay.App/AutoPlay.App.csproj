@@ -5,6 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>AutoPlay.App</RootNamespace>
     <AssemblyName>AutoPlay</AssemblyName>
+    <!-- The user interface is in English: the translated resources of the .NET and WPF libraries are not published (about 9 MB). -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WPF0001: the Fluent theme (ThemeMode) is flagged as experimental by the WPF team. -->
@@ -25,7 +27,7 @@
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Extensions.Logging" />
     <PackageReference Include="Serilog.Sinks.File" />
-    <PackageReference Include="OpenCvSharp4.runtime.win" />
+    <PackageReference Include="OpenCvSharp4.runtime.win.slim" />
   </ItemGroup>
 
 </Project>

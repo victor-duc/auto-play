@@ -1,0 +1,2 @@
+6398150381565f97bd3cbdf6c8d3f290a1399ffac84e6b72b213a5765dcca844  AutoPlay-1.1.1-win-x64-self-contained.zip
+d1a2f6fd369bd3734b5732768ad62ca5dfcbe41ff5f86499f260bb09d5fd739b  AutoPlay-1.1.1-win-x64.zip

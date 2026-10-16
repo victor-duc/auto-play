@@ -505,8 +505,11 @@ in the sequence editor.
 - **.NET 10** (LTS), C#, **WPF** for the user interface, with the built-in **Fluent theme**
   (`ThemeMode`), which follows the light or dark mode of Windows unless forced in the settings. Colors
   are defined as theme-neutral brushes, so the windows read well in both modes.
-- **OpenCvSharp4** (with the `OpenCvSharp4.runtime.win` native package) for image matching. The
-  OpenCV video DLL (ffmpeg, about 50 MB), not used, is excluded from the build output.
+- **OpenCvSharp4** for image matching and PNG files, with the **slim** native packages
+  (`OpenCvSharp4.runtime.win.slim`, and `OpenCvSharp4.official.runtime.linux-x64.slim` for the tests
+  on Linux). They contain only the OpenCV modules AutoPlay may need (core, imgproc, imgcodecs…),
+  which reduces the build size: 55 MB instead of 67 MB for the native library, and no ffmpeg video
+  DLL. See the README, *Package size*.
 - **CommunityToolkit.Mvvm** (MVVM source generators) and **Microsoft.Extensions.DependencyInjection**
   in the user interface.
 - **Microsoft.Extensions.Logging**, with **Serilog** writing the log files.
